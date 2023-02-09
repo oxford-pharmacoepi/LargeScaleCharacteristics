@@ -63,8 +63,7 @@ addLargeScaleCharacteristics <- function(x,
                                            "condition_occurrence", "drug_era",
                                            "procedure_occurrence", "measurement"
                                          ),
-                                         overlap = TRUE,
-                                         minimumCellCount = 5) {
+                                         overlap = TRUE) {
   get_start_date <- list(
     "visit_occurrence" = "visit_start_date",
     "condition_occurrence" = "condition_start_date",
