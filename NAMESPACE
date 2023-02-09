@@ -3,6 +3,7 @@
 export("%>%")
 export(addLargeScaleCharacteristics)
 export(getLargeScaleCharacteristics)
+export(mockLargeScaleCharacteristics)
 importFrom(magrittr,"%>%")
 importFrom(rlang,":=")
 importFrom(rlang,.data)

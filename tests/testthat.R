@@ -1,4 +1,4 @@
 library(testthat)
-library(LargeScaleCharacterization)
+library(LargeScaleCharacteristics)
 
-test_check("LargeScaleCharacterization")
+test_check("LargeScaleCharacteristics")
