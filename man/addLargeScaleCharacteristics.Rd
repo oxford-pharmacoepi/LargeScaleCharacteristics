@@ -11,8 +11,7 @@ addLargeScaleCharacteristics(
     c(0, 0), c(1, 30), c(1, 90), c(31, 365), c(91, 365), c(366, NA)),
   tablesToCharacterize = c("condition_occurrence", "drug_era", "procedure_occurrence",
     "measurement"),
-  overlap = TRUE,
-  minimumCellCount = 5
+  overlap = TRUE
 )
 }
 \arguments{
@@ -40,10 +39,6 @@ and "specimen". By default: c("condition_occurrence", "drug_era",
 
 \item{overlap}{Whether you want to consider overlapping events (overlap =
 TRUE) or only incident ones (overlap = FALSE).}
-
-\item{minimumCellCount}{All counts lower than minimumCellCount will be
-obscured changing its value by NA. 'obscured' column of characterization
-tibble is TRUE when a count has been obscured. Otherwise it is FALSE.}
 }
 \value{
 The output of this function is a 3 elements list. First

@@ -36,9 +36,6 @@
 #' "procedure_occurrence", "measurement").
 #' @param overlap Whether you want to consider overlapping events (overlap =
 #' TRUE) or only incident ones (overlap = FALSE).
-#' @param minimumCellCount All counts lower than minimumCellCount will be
-#' obscured changing its value by NA. 'obscured' column of characterization
-#' tibble is TRUE when a count has been obscured. Otherwise it is FALSE.
 #'
 #' @return The output of this function is a 3 elements list. First
 #' ("Characterization") is a reference to a temporal table in the database. It
