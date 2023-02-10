@@ -42,7 +42,7 @@ supressCount <- function(result,
                          globalVariables = c(
                            "number_observations", "number_subjects"
                          ),
-                         stimatesToObscure = "count") {
+                         estimatesToObscure = "count") {
 
   ## check for standard types of user error
   errorMessage <- checkmate::makeAssertCollection()
