@@ -23,6 +23,8 @@ Imports:
     CDMConnector,
     checkmate,
     DBI,
-    testthat,
     duckdb,
     lubridate
+Suggests: 
+    testthat
+    
