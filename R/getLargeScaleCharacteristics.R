@@ -269,7 +269,8 @@ getLargeScaleCharacteristics <- function(cdm,
     study_table <- cdm[[table_name]] %>%
       dplyr::inner_join(subjects, by = "person_id") %>%
       # rename start date
-      dplyr::rename("start_date" = .env$start_date)
+      dplyr::rename("start_date" = .env$start_date) %>%
+      dplyr::mutate("concept_name" = .env$concept_id)
     # rename or create end date
     if (is.null(end_date) || isFALSE(overlap.k)) {
       study_table <- study_table %>%
@@ -326,7 +327,7 @@ getLargeScaleCharacteristics <- function(cdm,
       # get only distinct events per window id
       dplyr::select(
         "person_id", "cohort_start_date", "cohort_end_date", "window_id",
-        "concept_id"
+        "concept_id", "concept_name"
       ) %>%
       dplyr::distinct() %>%
       dplyr::compute()
@@ -363,10 +364,10 @@ getLargeScaleCharacteristics <- function(cdm,
         characterizedTables,
         by = c("person_id", "cohort_start_date", "cohort_end_date")
       ) %>%
-      dplyr::group_by(.data$concept_id, .data$window_id, .data$table_id) %>%
+      dplyr::group_by(.data$concept_id, .data$concept_name, .data$window_id, .data$table_id) %>%
       dplyr::tally() %>%
       dplyr::ungroup() %>%
-      dplyr::rename("counts" = "n") %>%
+      dplyr::rename("concept_count" = "n") %>%
       dplyr::collect() %>%
       dplyr::mutate(cohort_definition_id = targetCohortId[k])
     denominator <- targetCohort %>%
@@ -379,7 +380,7 @@ getLargeScaleCharacteristics <- function(cdm,
       dplyr::group_by(.data$window_id) %>%
       dplyr::tally() %>%
       dplyr::ungroup() %>%
-      dplyr::rename("in_observation" = "n") %>%
+      dplyr::rename("denominator_count" = "n") %>%
       dplyr::collect() %>%
       dplyr::mutate(cohort_definition_id = targetCohortId[k])
     if (k == 1) {
@@ -394,31 +395,46 @@ getLargeScaleCharacteristics <- function(cdm,
   }
   characterizedTables <- characterizedCohortk %>%
     dplyr::mutate(obscured_counts = dplyr::if_else(
-      .data$counts < .env$minimumCellCount, TRUE, FALSE
-    )) %>%
-    dplyr::mutate(counts = dplyr::if_else(
-      .data$obscured_counts == TRUE,
-      as.integer(NA),
-      as.integer(.data$counts)
+      .data$concept_count < .env$minimumCellCount, TRUE, FALSE
     )) %>%
     dplyr::relocate("cohort_definition_id", .before = "concept_id")
+
   subjects_denominator <- denominatork %>%
     dplyr::mutate(obscured_in_observation = dplyr::if_else(
-      .data$in_observation < .env$minimumCellCount, TRUE, FALSE
-    )) %>%
-    dplyr::mutate(in_observation = dplyr::if_else(
-      .data$obscured_in_observation == TRUE,
-      as.integer(NA),
-      as.integer(.data$in_observation)
+      .data$denominator_count < .env$minimumCellCount, TRUE, FALSE
     )) %>%
     dplyr::relocate("cohort_definition_id", .before = "window_id")
 
-  result <- list()
-  result$characterization <- characterizedTables
-  result$denominator <- subjects_denominator
-  result$temporalWindows <- temporalWindows
-  result$tablesToCharacterize <- tablesToCharacterize
-  result$overlap <- overlap
+  tablesToCharacterize <- tibble::tibble(
+    table_id = seq(length(tablesToCharacterize)),
+    table_name = tablesToCharacterize
+  )
+
+  characterizedTables <- characterizedTables %>%
+    dplyr::mutate(concept_count = dplyr::if_else(.data$obscured_counts,
+    "<5",
+    as.character(.data$concept_count)
+  )) %>% dplyr::select("cohort_definition_id", "table_id","window_id", "concept_id",
+                       "concept_name", "concept_count")
+
+  subjects_denominator <- subjects_denominator %>%
+    dplyr::mutate(denominator_count = dplyr::if_else(.data$obscured_in_observation,
+                                                  "<5",
+                                                  as.character(.data$denominator_count)
+    )) %>% dplyr::select("cohort_definition_id", "window_id", "denominator_count")
+
+  result <- characterizedTables %>%
+    dplyr::left_join(tablesToCharacterize, by = "table_id") %>%
+    dplyr::left_join(subjects_denominator,
+      by = c(
+        "cohort_definition_id",
+        "window_id"
+      )
+    ) %>% dplyr::left_join(temporalWindows, by = "window_id") %>%
+    dplyr::select("cohort_definition_id","table_id", "table_name",
+                         "window_id", "window_name", "concept_id",
+                  "concept_name", "concept_count", "denominator_count") %>%
+    dplyr::mutate(concept_type = "Standard")
 
   return(result)
 }

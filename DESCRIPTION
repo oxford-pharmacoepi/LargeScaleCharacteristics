@@ -24,7 +24,7 @@ Imports:
     checkmate,
     DBI,
     duckdb,
-    lubridate
+    lubridate,
+    tibble
 Suggests: 
     testthat
-    
