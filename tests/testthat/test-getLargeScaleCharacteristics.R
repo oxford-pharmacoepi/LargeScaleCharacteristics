@@ -195,7 +195,7 @@ test_that("check overlap and drug era table works", {
   )
   expect_true(any(result_no_overlap$window_name == "-365;-31") == FALSE)
 
-  #test another cohort
+  # test another cohort
   cohort1 <- tibble::tibble(
     cohort_definition_id = c(rep("1", 9)),
     subject_id = c(rep("1", 9)),
@@ -230,18 +230,18 @@ test_that("check overlap and drug era table works", {
   )
 
   result_allow_overlap <- getLargeScaleCharacteristics(cdm,
-                                                       targetCohortName = c("cohort1"),
-                                                       tablesToCharacterize = c("drug_era"),
-                                                       overlap = TRUE
+    targetCohortName = c("cohort1"),
+    tablesToCharacterize = c("drug_era"),
+    overlap = TRUE
   )
   expect_true(result_allow_overlap[result_allow_overlap$window_name == "366;Any", ]$concept_count == 7)
   expect_true(result_allow_overlap[result_allow_overlap$window_name == "31;365", ]$concept_count == 9)
   expect_true(result_allow_overlap[result_allow_overlap$window_name == "91;365", ]$concept_count == 9)
 
   result_no_overlap <- getLargeScaleCharacteristics(cdm,
-                                                    targetCohortName = c("cohort1"),
-                                                    tablesToCharacterize = c("drug_era"),
-                                                    overlap = FALSE
+    targetCohortName = c("cohort1"),
+    tablesToCharacterize = c("drug_era"),
+    overlap = FALSE
   )
   expect_true(any(result_no_overlap$window_name == "366;Any") == FALSE)
 })
@@ -372,33 +372,27 @@ test_that("check each supported table works", {
     drug_strength = drug_strength
   )
 
-
   # check all supported tables separately should not throw any error
   expect_no_error(getLargeScaleCharacteristics(cdm,
     targetCohortName = c("cohort1"),
     overlap = TRUE,
     tablesToCharacterize = "visit_occurrence"
   ))
-
   expect_no_error(getLargeScaleCharacteristics(cdm,
     targetCohortName = c("cohort1"),
     overlap = TRUE,
     tablesToCharacterize = "condition_occurrence"
   ))
-
-
   expect_no_error(getLargeScaleCharacteristics(cdm,
     targetCohortName = c("cohort1"),
     overlap = TRUE,
     tablesToCharacterize = "drug_exposure"
   ))
-
   expect_no_error(getLargeScaleCharacteristics(cdm,
     targetCohortName = c("cohort1"),
     overlap = TRUE,
     tablesToCharacterize = "procedure_occurrence"
   ))
-
   expect_no_error(getLargeScaleCharacteristics(cdm,
     targetCohortName = c("cohort1"),
     overlap = TRUE,
@@ -436,4 +430,52 @@ test_that("check each supported table works", {
     overlap = TRUE,
     tablesToCharacterize = "drug_strength"
   ))
+})
+
+
+
+test_that("check minimumCellCount works", {
+  cohort1 <- tibble::tibble(
+    cohort_definition_id = c("1"),
+    subject_id = c("1"),
+    cohort_start_date = c(
+      as.Date("2010-03-03")
+    ),
+    cohort_end_date = c(
+      as.Date("2012-01-01")
+    )
+  )
+  cohort2 <- tibble::tibble(
+    cohort_definition_id = c("1", "1", "1"),
+    subject_id = c("1", "2", "3"),
+    cohort_start_date = c(
+      as.Date("2000-03-03"), as.Date("2000-03-01"), as.Date("2000-02-01")
+    ),
+    cohort_end_date = c(
+      as.Date("2020-01-01"), as.Date("2020-01-01"), as.Date("2019-01-01")
+    )
+  )
+
+  drug_era <- tibble::tibble(
+    person_id = c("1"),
+    drug_era_start_date = c(as.Date("2000-03-03")),
+    drug_era_end_date = c(as.Date("2010-03-03")),
+    drug_concept_id = c("1")
+  )
+
+  cdm <- mockLargeScaleCharacteristics(
+    cohort1 = cohort1, cohort2 = cohort2,
+    drug_era = drug_era
+  )
+
+  minimumCellCount <- 2
+
+  result <- getLargeScaleCharacteristics(cdm,
+    targetCohortName = c("cohort1"),
+    overlap = TRUE,
+    tablesToCharacterize = "drug_era",
+    minimumCellCount = minimumCellCount
+  )
+
+  expect_true(unique(result$concept_count) == paste0("<", minimumCellCount))
 })

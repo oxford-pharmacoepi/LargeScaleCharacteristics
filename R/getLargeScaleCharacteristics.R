@@ -412,16 +412,20 @@ getLargeScaleCharacteristics <- function(cdm,
 
   characterizedTables <- characterizedTables %>%
     dplyr::mutate(concept_count = dplyr::if_else(.data$obscured_counts,
-    "<5",
-    as.character(.data$concept_count)
-  )) %>% dplyr::select("cohort_definition_id", "table_id","window_id", "concept_id",
-                       "concept_name", "concept_count")
+      paste0("<", minimumCellCount),
+      as.character(.data$concept_count)
+    )) %>%
+    dplyr::select(
+      "cohort_definition_id", "table_id", "window_id", "concept_id",
+      "concept_name", "concept_count"
+    )
 
   subjects_denominator <- subjects_denominator %>%
     dplyr::mutate(denominator_count = dplyr::if_else(.data$obscured_in_observation,
-                                                  "<5",
-                                                  as.character(.data$denominator_count)
-    )) %>% dplyr::select("cohort_definition_id", "window_id", "denominator_count")
+      paste0("<", minimumCellCount),
+      as.character(.data$denominator_count)
+    )) %>%
+    dplyr::select("cohort_definition_id", "window_id", "denominator_count")
 
   result <- characterizedTables %>%
     dplyr::left_join(tablesToCharacterize, by = "table_id") %>%
@@ -430,10 +434,13 @@ getLargeScaleCharacteristics <- function(cdm,
         "cohort_definition_id",
         "window_id"
       )
-    ) %>% dplyr::left_join(temporalWindows, by = "window_id") %>%
-    dplyr::select("cohort_definition_id","table_id", "table_name",
-                         "window_id", "window_name", "concept_id",
-                  "concept_name", "concept_count", "denominator_count") %>%
+    ) %>%
+    dplyr::left_join(temporalWindows, by = "window_id") %>%
+    dplyr::select(
+      "cohort_definition_id", "table_id", "table_name",
+      "window_id", "window_name", "concept_id",
+      "concept_name", "concept_count", "denominator_count"
+    ) %>%
     dplyr::mutate(concept_type = "Standard")
 
   return(result)
