@@ -47,10 +47,10 @@
 #' @param min_days_to_visit_end the minimum number of days of the visit integer
 #' @param max_days_to_condition_end the maximum number of days of the condition integer
 #' @param max_days_to_visit_end the maximum number of days of the visit integer
-
+#' @param concept the concept table
 #' @param concept_ancestor the concept ancestor table
-#' @param ancestor_concept_id_size the size of ceoncept ancestor table
-
+#' @param ancestor_concept_id_size the size of concept ancestor table
+#' @param concept_id_size he size of concept table
 #' @param cohort1 cohort table for test to run in getindication
 #' @param cohort2 cohort table for test to run in getindication
 #' @param ... user self defined tibble table to put in cdm, it can input as many as the user want
@@ -64,10 +64,12 @@ mockLargeScaleCharacteristics <- function(drug_exposure = NULL,
                                           condition_occurrence = NULL,
                                           visit_occurrence = NULL,
                                           concept_ancestor = NULL,
+                                          concept = NULL,
                                           person = NULL,
                                           cohort1 = NULL,
                                           cohort2 = NULL,
                                           drug_concept_id_size = 5,
+                                          concept_id_size = 5,
                                           ancestor_concept_id_size = 5,
                                           condition_concept_id_size = 5,
                                           visit_concept_id_size = 5,
@@ -491,6 +493,17 @@ mockLargeScaleCharacteristics <- function(drug_exposure = NULL,
     )
   }
 
+  if (is.null(concept)) {
+    concept_id_values<-
+      seq(1:concept_id_size)
+    concept_name_values <-
+      seq(1:concept_id_size)
+    concept <- data.frame(
+      concept_id = as.numeric(concept_id_values),
+      concept_name = c(concept_name_values)
+    )
+  }
+
   # cohort table 1
   if (is.null(cohort1)) {
     cohort1 <- dplyr::tibble(
@@ -568,6 +581,13 @@ mockLargeScaleCharacteristics <- function(drug_exposure = NULL,
 
 
   DBI::dbWithTransaction(db, {
+    DBI::dbWriteTable(db, "concept",
+                      concept,
+                      overwrite = TRUE
+    )
+  })
+
+  DBI::dbWithTransaction(db, {
     DBI::dbWriteTable(db, "cohort1",
       cohort1,
       overwrite = TRUE
@@ -598,6 +618,7 @@ mockLargeScaleCharacteristics <- function(drug_exposure = NULL,
         "drug_exposure",
         "person",
         "concept_ancestor",
+        "concept",
         "observation_period",
         "condition_occurrence",
         "visit_occurrence"
@@ -612,6 +633,7 @@ mockLargeScaleCharacteristics <- function(drug_exposure = NULL,
         "drug_exposure",
         "person",
         "concept_ancestor",
+        "concept",
         "observation_period",
         "condition_occurrence",
         "visit_occurrence"

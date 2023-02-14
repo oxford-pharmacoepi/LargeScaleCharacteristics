@@ -11,10 +11,12 @@ mockLargeScaleCharacteristics(
   condition_occurrence = NULL,
   visit_occurrence = NULL,
   concept_ancestor = NULL,
+  concept = NULL,
   person = NULL,
   cohort1 = NULL,
   cohort2 = NULL,
   drug_concept_id_size = 5,
+  concept_id_size = 5,
   ancestor_concept_id_size = 5,
   condition_concept_id_size = 5,
   visit_concept_id_size = 5,
@@ -55,6 +57,8 @@ mockLargeScaleCharacteristics(
 
 \item{concept_ancestor}{the concept ancestor table}
 
+\item{concept}{the concept table}
+
 \item{person}{default null user can define its own table}
 
 \item{cohort1}{cohort table for test to run in getindication}
@@ -63,7 +67,9 @@ mockLargeScaleCharacteristics(
 
 \item{drug_concept_id_size}{number of unique drug concept id}
 
-\item{ancestor_concept_id_size}{the size of ceoncept ancestor table}
+\item{concept_id_size}{he size of concept table}
+
+\item{ancestor_concept_id_size}{the size of concept ancestor table}
 
 \item{condition_concept_id_size}{number of unique row in the condition concept table}
 

@@ -269,8 +269,7 @@ getLargeScaleCharacteristics <- function(cdm,
     study_table <- cdm[[table_name]] %>%
       dplyr::inner_join(subjects, by = "person_id") %>%
       # rename start date
-      dplyr::rename("start_date" = .env$start_date) %>%
-      dplyr::mutate("concept_name" = .env$concept_id)
+      dplyr::rename("start_date" = .env$start_date)
     # rename or create end date
     if (is.null(end_date) || isFALSE(overlap.k)) {
       study_table <- study_table %>%
@@ -280,8 +279,13 @@ getLargeScaleCharacteristics <- function(cdm,
         dplyr::rename("end_date" = .env$end_date)
     }
     study_table <- study_table %>%
-      # rename concept id
+      # rename concept id and get concept name
       dplyr::rename("concept_id" = .env$concept_id) %>%
+      dplyr::left_join(
+        cdm$concept %>%
+          dplyr::select("concept_id", "concept_name"),
+        by = "concept_id"
+      ) %>%
       # obtain observations inside the observation period only
       dplyr::filter(.data$start_date <= .data$observation_period_end_date) %>%
       dplyr::filter(.data$end_date >= .data$observation_period_start_date) %>%
