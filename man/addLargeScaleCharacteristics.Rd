@@ -5,8 +5,9 @@
 \title{Explain function}
 \usage{
 addLargeScaleCharacteristics(
-  x,
   cdm,
+  targetCohortName,
+  targetCohortId = NULL,
   temporalWindows = list(c(NA, -366), c(-365, -91), c(-365, -31), c(-90, -1), c(-30, -1),
     c(0, 0), c(1, 30), c(1, 90), c(31, 365), c(91, 365), c(366, NA)),
   tablesToCharacterize = c("condition_occurrence", "drug_era", "procedure_occurrence",
@@ -15,11 +16,17 @@ addLargeScaleCharacteristics(
 )
 }
 \arguments{
-\item{x}{table}
-
 \item{cdm}{'cdm' object created with CDMConnector::cdm_from_con(). It must
 must contain the 'targetCohort' table and all the tables that we want to
 characterize. It is a compulsory input, no default value is provided.}
+
+\item{targetCohortName}{Name of the table in the cdm that contains the
+target cohort that we want to characterize. It is a compulsory input, no
+default value is provided.}
+
+\item{targetCohortId}{Cohort definition id for the analyzed target cohorts.
+It can be a vector or a number. If it is NULL all cohorts are analyzed. By
+default: NULL.}
 
 \item{temporalWindows}{Temporal windows that we want to characterize. It must
 be a list of numeric vectors of length two. The tables will be characterized

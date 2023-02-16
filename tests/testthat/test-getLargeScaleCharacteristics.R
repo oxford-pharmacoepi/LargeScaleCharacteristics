@@ -479,3 +479,62 @@ test_that("check minimumCellCount works", {
 
   expect_true(unique(result$concept_count) == paste0("<", minimumCellCount))
 })
+
+
+
+
+
+
+
+
+
+
+
+
+test_that("check multiple target cohort IDs works", {
+  cohort1 <- tibble::tibble(
+    cohort_definition_id = c("1", "2"),
+    subject_id = c("1", "1"),
+    cohort_start_date = c(
+      as.Date("2010-03-03"),
+      as.Date("2010-01-03")
+    ),
+    cohort_end_date = c(
+      as.Date("2012-01-01"),
+      as.Date("2011-03-01")
+    )
+  )
+  cohort2 <- tibble::tibble(
+    cohort_definition_id = c("1", "1", "1"),
+    subject_id = c("1", "2", "3"),
+    cohort_start_date = c(
+      as.Date("2000-03-03"), as.Date("2000-03-01"), as.Date("2000-02-01")
+    ),
+    cohort_end_date = c(
+      as.Date("2020-01-01"), as.Date("2020-01-01"), as.Date("2019-01-01")
+    )
+  )
+
+  drug_era <- tibble::tibble(
+    person_id = c("1"),
+    drug_era_start_date = c(as.Date("2000-03-03")),
+    drug_era_end_date = c(as.Date("2010-03-03")),
+    drug_concept_id = c("1")
+  )
+
+  cdm <- mockLargeScaleCharacteristics(
+    cohort1 = cohort1, cohort2 = cohort2,
+    drug_era = drug_era
+  )
+
+  minimumCellCount <- 2
+
+  result <- getLargeScaleCharacteristics(cdm,
+                                         targetCohortName = c("cohort1"),
+                                         overlap = TRUE,
+                                         tablesToCharacterize = "drug_era",
+                                         minimumCellCount = minimumCellCount
+  )
+
+  expect_true(unique(result$concept_count) == paste0("<", minimumCellCount))
+})

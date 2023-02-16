@@ -25,6 +25,7 @@ Imports:
     DBI,
     duckdb,
     lubridate,
-    tibble
+    tibble,
+    tidyr
 Suggests: 
     testthat
