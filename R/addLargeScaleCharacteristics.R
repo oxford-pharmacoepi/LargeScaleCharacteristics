@@ -106,6 +106,65 @@ addLargeScaleCharacteristics <- function(cdm,
     "specimen" = "specimen_concept_id"
   )
 
+  errorMessage <- checkmate::makeAssertCollection()
+
+  # check cdm
+  checkmate::assertClass(cdm, "cdm_reference", add = errorMessage)
+
+  # check targetCohortName
+  checkmate::assertCharacter(targetCohortName, len = 1, add = errorMessage)
+
+  # check that targetCohortName point to a table that is a cohort
+  checkmate::assertTRUE(
+    all(c(
+      "cohort_definition_id",
+      "subject_id",
+      "cohort_start_date",
+      "cohort_end_date"
+    ) %in% colnames(cdm[[targetCohortName]])),
+    add = errorMessage
+  )
+
+  # check targetCohortId
+  checkmate::assertIntegerish(
+    targetCohortId,
+    lower = 1,
+    null.ok = TRUE,
+    add = errorMessage
+  )
+
+  # check temporalWindows
+  checkmate::assertList(temporalWindows, min.len = 1, add = errorMessage)
+  checkmate::assertTRUE(
+    all(unlist(lapply(temporalWindows, length)) == 2),
+    add = errorMessage
+  )
+
+  # check tablesToCharacterize
+  checkmate::assertCharacter(
+    tablesToCharacterize,
+    min.len = 1,
+    add = errorMessage
+  )
+  checkmate::assertTRUE(
+    all(tablesToCharacterize %in% names(cdm)),
+    add = errorMessage
+  )
+  checkmate::assertTRUE(
+    all(tablesToCharacterize %in% c(
+      "visit_occurrence", "condition_occurrence", "drug_exposure",
+      "procedure_occurrence", "device_exposure", "measurement", "observation",
+      "drug_era", "condition_era", "specimen"
+    )),
+    add = errorMessage
+  )
+
+  # overlap
+  checkmate::assertLogical(overlap, any.missing = FALSE, add = errorMessage)
+
+  # report collection of errors
+  checkmate::reportAssertions(collection = errorMessage)
+
   if (length(overlap) > 1) {
     if (length(overlap) != length(tablesToCharacterize)) {
       stop("If length(overlap)>1 then length(overlap) = length(tablesToCharacterize)")
