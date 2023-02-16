@@ -12,16 +12,21 @@ mockLargeScaleCharacteristics(
   visit_occurrence = NULL,
   concept_ancestor = NULL,
   concept = NULL,
+  measurement = NULL,
+  drug_era = NULL,
+  procedure_occurrence = NULL,
   person = NULL,
   cohort1 = NULL,
   cohort2 = NULL,
   drug_concept_id_size = 5,
+  measurement_size = 5,
   concept_id_size = 5,
   ancestor_concept_id_size = 5,
   condition_concept_id_size = 5,
   visit_concept_id_size = 5,
   visit_occurrence_id_size = 5,
   ingredient_concept_id_size = 1,
+  procedure_occurrence_size = 5,
   drug_exposure_size = 10,
   patient_size = 1,
   min_drug_exposure_start_date = "2000-01-01",
@@ -59,6 +64,12 @@ mockLargeScaleCharacteristics(
 
 \item{concept}{the concept table}
 
+\item{measurement}{the measurement table}
+
+\item{drug_era}{the drug_era table}
+
+\item{procedure_occurrence}{the procedure_occurrence table}
+
 \item{person}{default null user can define its own table}
 
 \item{cohort1}{cohort table for test to run in getindication}
@@ -66,6 +77,8 @@ mockLargeScaleCharacteristics(
 \item{cohort2}{cohort table for test to run in getindication}
 
 \item{drug_concept_id_size}{number of unique drug concept id}
+
+\item{measurement_size}{number of measurement}
 
 \item{concept_id_size}{he size of concept table}
 
@@ -78,6 +91,8 @@ mockLargeScaleCharacteristics(
 \item{visit_occurrence_id_size}{number of unique visit occurrence id}
 
 \item{ingredient_concept_id_size}{number of unique drug ingredient concept id}
+
+\item{procedure_occurrence_size}{number of procedure_occurrence}
 
 \item{drug_exposure_size}{number of unique drug exposure}
 

@@ -45,7 +45,7 @@ test_that("check getLargeScaleCharacteristics inputs checks", {
   # throw error if tablesToCharacterize not in cdm, does not allow list
   expect_error(getLargeScaleCharacteristics(cdm,
     targetCohortName = c("cohort1"),
-    tablesToCharacterize = c("measurement")
+    tablesToCharacterize = c("device_exposure")
   ))
 
   expect_error(getLargeScaleCharacteristics(cdm,

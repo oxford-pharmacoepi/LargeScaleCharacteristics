@@ -15,16 +15,10 @@
 # limitations under the License.
 
 #' Explain function
-#'
+#' @param x table
 #' @param cdm 'cdm' object created with CDMConnector::cdm_from_con(). It must
-#' must contain the 'targetCohort' table and all the tables that we want to
+#' must contain the input x table and all the tables that we want to
 #' characterize. It is a compulsory input, no default value is provided.
-#' @param targetCohortName Name of the table in the cdm that contains the
-#' target cohort that we want to characterize. It is a compulsory input, no
-#' default value is provided.
-#' @param targetCohortId Cohort definition id for the analyzed target cohorts.
-#' It can be a vector or a number. If it is NULL all cohorts are analyzed. By
-#' default: NULL.
 #' @param temporalWindows Temporal windows that we want to characterize. It must
 #' be a list of numeric vectors of length two. The tables will be characterized
 #' between the first element and the second element respect to the
@@ -53,9 +47,8 @@
 #' @export
 #'
 #' @examples
-addLargeScaleCharacteristics <- function(cdm,
-                                         targetCohortName,
-                                         targetCohortId = NULL,
+addLargeScaleCharacteristics <- function(x,
+                                         cdm,
                                          temporalWindows = list(
                                            c(NA, -366), c(-365, -91),
                                            c(-365, -31), c(-90, -1), c(-30, -1),
@@ -111,27 +104,27 @@ addLargeScaleCharacteristics <- function(cdm,
   # check cdm
   checkmate::assertClass(cdm, "cdm_reference", add = errorMessage)
 
-  # check targetCohortName
-  checkmate::assertCharacter(targetCohortName, len = 1, add = errorMessage)
+  # check x
+  xCheck <- inherits(x, "tbl_dbi")
+  if (!isTRUE(xCheck)) {
+    errorMessage$push(
+      "- x is not a table"
+    )
+  }
 
-  # check that targetCohortName point to a table that is a cohort
+
+  # check that x has tables required
   checkmate::assertTRUE(
     all(c(
       "cohort_definition_id",
       "subject_id",
       "cohort_start_date",
       "cohort_end_date"
-    ) %in% colnames(cdm[[targetCohortName]])),
+    ) %in% colnames(x)),
     add = errorMessage
   )
 
-  # check targetCohortId
-  checkmate::assertIntegerish(
-    targetCohortId,
-    lower = 1,
-    null.ok = TRUE,
-    add = errorMessage
-  )
+
 
   # check temporalWindows
   checkmate::assertList(temporalWindows, min.len = 1, add = errorMessage)
@@ -189,20 +182,10 @@ addLargeScaleCharacteristics <- function(cdm,
     dplyr::mutate(window_id = dplyr::row_number()) %>%
     dplyr::select("window_id", "window_name", "window_start", "window_end")
 
-  # filter the cohort and get the targetCohortId if not specified
-  if (!is.null(targetCohortId)) {
-    targetCohort <- cdm[[targetCohortName]] %>%
-      dplyr::filter(.data$cohort_definition_id %in% .env$targetCohortId)
-  } else {
-    targetCohort <- cdm[[targetCohortName]]
-    targetCohortId <- targetCohort %>%
-      dplyr::select("cohort_definition_id") %>%
-      dplyr::distinct() %>%
-      dplyr::pull()
-  }
+
 
   # get the distinct subjects with their observation period
-  subjects <- targetCohort %>%
+  subjects <- x %>%
     dplyr::select(
       "person_id" = "subject_id",
       "cohort_start_date",
@@ -319,9 +302,7 @@ addLargeScaleCharacteristics <- function(cdm,
 
   # if we want to summarise the data we count the number of counts for each
   # event, window and table
-  for (k in 1:length(targetCohortId)) {
-    characterizedCohort <- targetCohort %>%
-      dplyr::filter(.data$cohort_definition_id == !!targetCohortId[k]) %>%
+    characterizedCohort <- x %>%
       dplyr::select(
         "person_id" = "subject_id", "cohort_start_date", "cohort_end_date"
       ) %>%
@@ -329,35 +310,31 @@ addLargeScaleCharacteristics <- function(cdm,
         characterizedTables,
         by = c("person_id", "cohort_start_date", "cohort_end_date")
       ) %>%
-      dplyr::collect() %>%
-      dplyr::mutate(cohort_definition_id = targetCohortId[k])
-    if (k == 1) {
-      characterizedCohortk <- characterizedCohort
-    } else {
-      characterizedCohortk <- characterizedCohortk %>%
-        dplyr::union_all(characterizedCohort)
-    }
-  }
+      dplyr::compute()
 
-  characterizedCohortk_spread <- characterizedCohortk %>%
+
+  characterizedCohortk_spread <- characterizedCohort %>%
     dplyr::full_join(temporalWindows %>% dplyr::select("window_id", "window_name"),
-      by = "window_id"
+      by = "window_id",
+      copy = TRUE
     ) %>%
-    dplyr::select(-c("window_id", "concept_name", "table_id", "cohort_definition_id"))  %>%
+    dplyr::select(-c("window_id", "concept_name", "table_id"))  %>%
     tidyr::pivot_wider(
       names_from = c(table_name, concept_id, window_name),
       names_glue = "{table_name}_{concept_id}_{window_name}",
       values_from = flag
     )
 
-  result <- subjects %>% dplyr::collect() %>%
+  result <- subjects %>%
     dplyr::left_join(characterizedCohortk_spread,
     by = c("person_id", "cohort_start_date", "cohort_end_date")
   ) %>% dplyr::rename("subject_id" = "person_id") %>%
-    dplyr::select(-c("observation_period_start_date", "observation_period_end_date"))
+    dplyr::select(-c("observation_period_start_date", "observation_period_end_date")) %>% dplyr::compute()
 
-  result[is.na(result)]<-0
 
+
+  result <- result %>%
+    dplyr::mutate_if(.,is.numeric, dplyr::funs(ifelse(is.na(.), 0, .)))
 
   return(result)
 }

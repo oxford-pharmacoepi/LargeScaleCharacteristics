@@ -24,7 +24,9 @@
 #' @param visit_occurrence default null user can define its own visit_occurrence table
 #' @param person default null user can define its own table
 #' @param drug_concept_id_size number of unique drug concept id
+#' @param measurement_size number of measurement
 #' @param ingredient_concept_id_size number of unique drug ingredient concept id
+#' @param procedure_occurrence_size number of procedure_occurrence
 #' @param drug_exposure_size number of unique drug exposure
 #' @param patient_size number of unique patient
 #' @param min_drug_exposure_start_date user define minimum drug exposure start date
@@ -48,6 +50,9 @@
 #' @param max_days_to_condition_end the maximum number of days of the condition integer
 #' @param max_days_to_visit_end the maximum number of days of the visit integer
 #' @param concept the concept table
+#' @param measurement the measurement table
+#' @param procedure_occurrence the procedure_occurrence table
+#' @param drug_era the drug_era table
 #' @param concept_ancestor the concept ancestor table
 #' @param ancestor_concept_id_size the size of concept ancestor table
 #' @param concept_id_size he size of concept table
@@ -65,16 +70,21 @@ mockLargeScaleCharacteristics <- function(drug_exposure = NULL,
                                           visit_occurrence = NULL,
                                           concept_ancestor = NULL,
                                           concept = NULL,
+                                          measurement = NULL,
+                                          drug_era = NULL,
+                                          procedure_occurrence = NULL,
                                           person = NULL,
                                           cohort1 = NULL,
                                           cohort2 = NULL,
                                           drug_concept_id_size = 5,
+                                          measurement_size = 5,
                                           concept_id_size = 5,
                                           ancestor_concept_id_size = 5,
                                           condition_concept_id_size = 5,
                                           visit_concept_id_size = 5,
                                           visit_occurrence_id_size = 5,
                                           ingredient_concept_id_size = 1,
+                                          procedure_occurrence_size = 5,
                                           drug_exposure_size = 10,
                                           patient_size = 1,
                                           min_drug_exposure_start_date = "2000-01-01",
@@ -103,11 +113,17 @@ mockLargeScaleCharacteristics <- function(drug_exposure = NULL,
   checkmate::assert_int(drug_exposure_size, lower = 1)
   checkmate::assert_int(patient_size, lower = 1)
   checkmate::assert_int(drug_concept_id_size, lower = 1)
+  checkmate::assert_int(measurement_size, lower = 1)
   checkmate::assert_int(ancestor_concept_id_size, lower = 1)
   checkmate::assert_int(ingredient_concept_id_size, lower = 1)
   checkmate::assertTRUE(drug_exposure_size >= patient_size)
   checkmate::assert_tibble(person, null.ok = TRUE)
+  checkmate::assert_tibble(measurement, null.ok = TRUE)
+  checkmate::assert_tibble(drug_era, null.ok = TRUE)
+  checkmate::assert_tibble(procedure_occurrence, null.ok = TRUE)
+  checkmate::assert_tibble(concept, null.ok = TRUE)
   checkmate::assert_tibble(observation_period, null.ok = TRUE)
+  checkmate::assert_tibble(concept_ancestor, null.ok = TRUE)
   checkmate::assert_tibble(drug_exposure, null.ok = TRUE)
   checkmate::assert_tibble(condition_occurrence, null.ok = TRUE)
   checkmate::assert_tibble(visit_occurrence, null.ok = TRUE)
@@ -210,8 +226,22 @@ mockLargeScaleCharacteristics <- function(drug_exposure = NULL,
       )
   }
 
-
-
+  # create drug strength table
+  if (is.null(drug_era)) {
+    drug_concept_id <-
+      seq(1:drug_concept_id_size) # create unique drug concept id
+    person_id <-
+      rep(1, drug_concept_id_size) # create ingredient concept id
+    drug_era_start_date <- rep(as.Date("2000-01-01"), drug_concept_id_size)
+    drug_era_end_date <- rep(as.Date("2010-01-01"), drug_concept_id_size)
+    drug_era <-
+      data.frame(
+        drug_concept_id = drug_concept_id,
+        person_id = person_id,
+        drug_era_start_date = drug_era_start_date,
+        drug_era_end_date = drug_era_end_date
+      )
+  }
 
 
   # drug_exposure
@@ -232,13 +262,14 @@ mockLargeScaleCharacteristics <- function(drug_exposure = NULL,
 
     # generate drug exposure start date
     drug_exposure_start_date <-
-      sample(seq(
-        as.Date(min_drug_exposure_start_date),
-        as.Date(max_drug_exposure_start_date),
-        by = "day"
-      ),
-      drug_exposure_size,
-      replace = TRUE
+      sample(
+        seq(
+          as.Date(min_drug_exposure_start_date),
+          as.Date(max_drug_exposure_start_date),
+          by = "day"
+        ),
+        drug_exposure_size,
+        replace = TRUE
       )
     # generate drug exposure end date to happens after drug exposure start date
     drug_exposure_end_date <-
@@ -275,7 +306,6 @@ mockLargeScaleCharacteristics <- function(drug_exposure = NULL,
   )
 
   if (is.null(person) | is.null(observation_period)) {
-
     # Define earliest possible date of birth for person table
     if (is.null(earliest_date_of_birth)) {
       earliest_date_of_birth <- as.Date("1920-01-01")
@@ -285,13 +315,14 @@ mockLargeScaleCharacteristics <- function(drug_exposure = NULL,
       latest_date_of_birth <- as.Date("2000-01-01")
     }
 
-    DOB <- sample(seq(
-      as.Date(earliest_date_of_birth),
-      as.Date(latest_date_of_birth),
-      by = "day"
-    ),
-    patient_size,
-    replace = TRUE
+    DOB <- sample(
+      seq(
+        as.Date(earliest_date_of_birth),
+        as.Date(latest_date_of_birth),
+        by = "day"
+      ),
+      patient_size,
+      replace = TRUE
     )
     # year, month, day
     DOB_year <- as.numeric(format(DOB, "%Y"))
@@ -310,13 +341,14 @@ mockLargeScaleCharacteristics <- function(drug_exposure = NULL,
       latest_observation_start_date <- as.Date("2010-01-01")
     }
     obs_start_date <-
-      sample(seq(
-        as.Date(earliest_observation_start_date),
-        as.Date(latest_observation_start_date),
-        by = "day"
-      ),
-      patient_size,
-      replace = TRUE
+      sample(
+        seq(
+          as.Date(earliest_observation_start_date),
+          as.Date(latest_observation_start_date),
+          by = "day"
+        ),
+        patient_size,
+        replace = TRUE
       ) # start date for the period
 
 
@@ -350,13 +382,14 @@ mockLargeScaleCharacteristics <- function(drug_exposure = NULL,
       latest_condition_start_date <- as.Date("2020-01-01")
     }
     condition_start_date <-
-      sample(seq(
-        as.Date(earliest_condition_start_date),
-        as.Date(latest_condition_start_date),
-        by = "day"
-      ),
-      patient_size,
-      replace = TRUE
+      sample(
+        seq(
+          as.Date(earliest_condition_start_date),
+          as.Date(latest_condition_start_date),
+          by = "day"
+        ),
+        patient_size,
+        replace = TRUE
       ) # start date for the period
 
 
@@ -396,13 +429,14 @@ mockLargeScaleCharacteristics <- function(drug_exposure = NULL,
       latest_visit_start_date <- as.Date("2020-01-01")
     }
     visit_start_date <-
-      sample(seq(
-        as.Date(earliest_visit_start_date),
-        as.Date(latest_visit_start_date),
-        by = "day"
-      ),
-      patient_size,
-      replace = TRUE
+      sample(
+        seq(
+          as.Date(earliest_visit_start_date),
+          as.Date(latest_visit_start_date),
+          by = "day"
+        ),
+        patient_size,
+        replace = TRUE
       ) # start date for the period
 
 
@@ -494,14 +528,42 @@ mockLargeScaleCharacteristics <- function(drug_exposure = NULL,
   }
 
   if (is.null(concept)) {
-    concept_id_values<-
+    concept_id_values <-
       seq(1:concept_id_size)
     concept_name_values <-
-      seq(1:concept_id_size)
+      paste0("concept_name_", 1:concept_id_size)
     concept <- data.frame(
       concept_id = as.numeric(concept_id_values),
       concept_name = c(concept_name_values)
     )
+  }
+
+
+  if (is.null(measurement)) {
+    person_id <-
+      seq(1:measurement_size)
+    measurement_concept_id <-
+      seq(1:measurement_size)
+    measurement_date <- c(rep(as.Date("2010-01-01"), measurement_size))
+    measurement <- data.frame(
+      person_id = person_id,
+      measurement_concept_id = c(measurement_concept_id),
+      measurement_date = measurement_date
+    )
+  }
+
+  if (is.null(procedure_occurrence)) {
+    person_id <-
+      seq(1:procedure_occurrence_size)
+    procedure_concept_id <-
+      seq(1:procedure_occurrence_size)
+    procedure_date <- c(rep(as.Date("2009-01-01"), procedure_occurrence_size))
+
+    procedure_occurrence <- data.frame(
+        person_id = person_id,
+        procedure_concept_id = procedure_concept_id,
+        procedure_date = procedure_date
+      )
   }
 
   # cohort table 1
@@ -566,6 +628,27 @@ mockLargeScaleCharacteristics <- function(drug_exposure = NULL,
   })
 
   DBI::dbWithTransaction(db, {
+    DBI::dbWriteTable(db, "measurement",
+      measurement,
+      overwrite = TRUE
+    )
+  })
+
+  DBI::dbWithTransaction(db, {
+    DBI::dbWriteTable(db, "procedure_occurrence",
+                      procedure_occurrence,
+                      overwrite = TRUE
+    )
+  })
+
+  DBI::dbWithTransaction(db, {
+    DBI::dbWriteTable(db, "drug_era",
+      drug_era,
+      overwrite = TRUE
+    )
+  })
+
+  DBI::dbWithTransaction(db, {
     DBI::dbWriteTable(db, "visit_occurrence",
       visit_occurrence,
       overwrite = TRUE
@@ -582,8 +665,8 @@ mockLargeScaleCharacteristics <- function(drug_exposure = NULL,
 
   DBI::dbWithTransaction(db, {
     DBI::dbWriteTable(db, "concept",
-                      concept,
-                      overwrite = TRUE
+      concept,
+      overwrite = TRUE
     )
   })
 
@@ -621,7 +704,10 @@ mockLargeScaleCharacteristics <- function(drug_exposure = NULL,
         "concept",
         "observation_period",
         "condition_occurrence",
-        "visit_occurrence"
+        "visit_occurrence",
+        "measurement",
+        "drug_era",
+        "procedure_occurrence"
       ),
       cohort_tables = c("cohort1", "cohort2", names(listTables))
     )
@@ -636,7 +722,10 @@ mockLargeScaleCharacteristics <- function(drug_exposure = NULL,
         "concept",
         "observation_period",
         "condition_occurrence",
-        "visit_occurrence"
+        "visit_occurrence",
+        "measurement",
+        "drug_era",
+        "procedure_occurrence"
       ),
       cohort_tables = c("cohort1", "cohort2")
     )

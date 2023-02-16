@@ -22,19 +22,24 @@ remotes::install_github("oxford-pharmacoepi/LargeScaleCharacteristics")
 
 When working with LargeScaleCharacteristics, you will use CDMConnector to manage
 your connection to the database. If you don´t already have this
-installed then you can install it in the same way:
+installed then you can install it and then it can be used to represent mapped database as a single R object:
 
 ``` r
 remotes::install_github("darwin-eu/CDMConnector")
+library(CDMConnector)
+con <- DBI::dbConnect(RPostgres::Postgres(),
+                      dbname = Sys.getenv("CDM5_POSTGRESQL_DBNAME"),
+                      host = Sys.getenv("CDM5_POSTGRESQL_HOST"),
+                      user = Sys.getenv("CDM5_POSTGRESQL_USER"),
+                      password = Sys.getenv("CDM5_POSTGRESQL_PASSWORD"))
+cdm <- CDMConnector::cdm_from_con(con,
+                                  cdm_schema = Sys.getenv("CDM5_POSTGRESQL_CDM_SCHEMA"))
 ```
 
 ## Example
 
-First, we need to create a cdm_reference for the data we´ll be using.
-Here we´ll use generate an example one, but to see how you would set
-this up for your database please consult the CDMConnector documentation
-at <https://odyosg.github.io/CDMConnector/>
-
+First, we need to create a cdm_reference for the data we´ll be using. For this example, we´ll generate a hypothetical cohort using mockLargeScaleCharacteristics in this package.
+For further details on CDMConnector please refer to <https://odyosg.github.io/CDMConnector/>
 ``` r
 library(CDMConnector)
 library(LargeScaleCharacteristics)
@@ -66,18 +71,44 @@ getLargeScaleCharacteristics(cdm,
   overlap = TRUE,
   tablesToCharacterize = "drug_exposure"
 )
-# this is what the function output looks like:
+#> # this is what the function output looks like:
 #> # A tibble: 3 × 10
-#>   cohort_definition_id table_id table_name window_id window_name concept_id concept_name concept_count
-#>                  <dbl>    <int> <chr>          <int> <chr>            <dbl>        <int> <chr> 
-#> 1                    1        1 drug_expo…         1 Any;-366             1            1 <5  
-#> 2                    1        1 drug_expo…         1 Any;-366             3            3 <5 
-#> 3                    1        1 drug_expo…         1 Any;-366             5            5 <5  
-#> # … with 2 more variables: denominator_count <chr>, concept_type <chr>
+#>   cohort_definition_id table_id table_name    window_id window_name concept_id concept_name   concept_count denominator_count concept_type
+#>                  <dbl>    <int> <chr>             <int> <chr>            <dbl> <chr>          <chr>         <chr>             <chr>       
+#> 1                    1        1 drug_exposure         1 Any;-366             1 concept_name_1 <5            <5                Standard    
+#> 2                    1        1 drug_exposure         1 Any;-366             3 concept_name_3 <5            <5                Standard    
+#> 3                    1        1 drug_exposure         1 Any;-366             5 concept_name_5 <5            <5                Standard  
 ```
 
-Add column using function addLargeScaleCharacteristics()
+Package also allows you to add column to a cohort using table(s) interested in, with function addLargeScaleCharacteristics(). Here we show an example of add covariates from drug exposure table to cohort1. First we show there are 5 different drug_concept_id in drug exposure:
 ``` r
-
+cdm$drug_exposure %>% dplyr::select(drug_concept_id) %>% dplyr::distinct()
+#> # Source:   SQL [5 x 1]
+#> # Database: DuckDB 0.5.0 [root@Darwin 21.3.0:R 4.2.1/:memory:]
+#>   drug_concept_id
+#>             <dbl>
+#> 1               1
+#> 2               5
+#> 3               2
+#> 4               4
+#> 5               3
+```
+Hence, the columns we are adding to cohort will have the name form of: {table_name}_{concept_id}_{window_name}. To demonstrate, we only select one window in this example list(c(-30, -1)), and the result looks like this
+``` r
+addLargeScaleCharacteristics(
+  x = cdm$cohort1,
+  cdm,
+  overlap = TRUE,
+  temporalWindows = list(c(-30, -1)),
+  tablesToCharacterize = c("drug_exposure")
+)
+#> # Source:   SQL [4 x 8]
+#> # Database: DuckDB 0.5.0 [root@Darwin 21.3.0:R 4.2.1/:memory:]
+#>   subject_id cohort_start_date cohort_end_date `drug_exposure_5_-30;-1` `drug_exposure_4_-30;-1` `drug_exposure_3_-30;-1` `drug_exposure_2_-30;-1` `drug_exposure_1_-30;-1`
+#>        <dbl> <date>            <date>                             <dbl>                    <dbl>                    <dbl>                    <dbl>                    <dbl>
+#> 1          1 2020-06-01        2020-08-01                             0                        0                        0                        0                        0
+#> 2          1 2020-01-01        2020-04-01                             0                        0                        0                        0                        0
+#> 3          2 2020-01-02        2020-02-02                             0                        0                        0                        0                        0
+#> 4          3 2020-01-01        2020-03-01                             0                        0                        0                        0                        0
 ```
 
