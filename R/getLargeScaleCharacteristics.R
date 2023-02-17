@@ -412,16 +412,12 @@ getLargeScaleCharacteristics <- function(cdm,
       dplyr::mutate(cohort_definition_id = targetCohortId[k])
     if (k == 1) {
       characterizedCohortk <- characterizedCohort
-      denominatork <- denominator %>%
-        dplyr::select(-"cohort_definition_id") %>%
-        dplyr::distinct()
+      denominatork <- denominator
     } else {
       characterizedCohortk <- characterizedCohortk %>%
         dplyr::union_all(characterizedCohort)
       denominatork <- denominatork %>%
-        dplyr::union_all(denominator) %>%
-        dplyr::select(-"cohort_definition_id") %>%
-        dplyr::distinct()
+        dplyr::union_all(denominator)
     }
   }
   characterizedTables <- characterizedCohortk %>%
@@ -429,6 +425,10 @@ getLargeScaleCharacteristics <- function(cdm,
       .data$concept_count < .env$minimumCellCount, TRUE, FALSE
     )) %>%
     dplyr::relocate("cohort_definition_id", .before = "concept_id")
+
+  denominatork <- denominatork %>%
+    dplyr::select(-"cohort_definition_id") %>%
+    dplyr::distinct()
 
   subjects_denominator <- denominatork %>%
     dplyr::mutate(obscured_in_observation = dplyr::if_else(
