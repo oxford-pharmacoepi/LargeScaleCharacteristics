@@ -124,6 +124,26 @@ addLargeScaleCharacteristics <- function(x,
     add = errorMessage
   )
 
+  #check input cohort cannot have missing in the following columns
+  checkmate::assertTRUE(
+    !checkmate::anyMissing(x %>% dplyr::pull("cohort_definition_id")),
+    add = errorMessage
+  )
+
+  checkmate::assertTRUE(
+    !checkmate::anyMissing(x %>% dplyr::pull("subject_id")),
+    add = errorMessage
+  )
+
+  checkmate::assertTRUE(
+    !checkmate::anyMissing(x %>% dplyr::pull("cohort_start_date")),
+    add = errorMessage
+  )
+
+  checkmate::assertTRUE(
+    !checkmate::anyMissing(x %>% dplyr::pull("cohort_end_date")),
+    add = errorMessage
+  )
 
 
   # check temporalWindows
@@ -227,6 +247,7 @@ addLargeScaleCharacteristics <- function(x,
       # rename concept id and get concept name
       dplyr::rename("concept_id" = .env$concept_id) %>%
       dplyr::mutate(table_name = table_name) %>%
+      dplyr::filter(concept_id != 0) %>%
       dplyr::left_join(
         cdm$concept %>%
           dplyr::select("concept_id", "concept_name"),
@@ -331,10 +352,7 @@ addLargeScaleCharacteristics <- function(x,
   ) %>% dplyr::rename("subject_id" = "person_id") %>%
     dplyr::select(-c("observation_period_start_date", "observation_period_end_date")) %>% dplyr::compute()
 
-
-
-  result <- result %>%
-    dplyr::mutate_if(.,is.numeric, dplyr::funs(ifelse(is.na(.), 0, .)))
+  result <- result %>% replace(is.na(.), 0)
 
   return(result)
 }

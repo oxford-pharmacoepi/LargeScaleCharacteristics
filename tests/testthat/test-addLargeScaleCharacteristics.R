@@ -240,3 +240,84 @@ test_that("check each supported table works", {
     cdm,
     tablesToCharacterize = "specimen"))
 })
+
+
+
+test_that("check if missing cohort start date in x, throw error", {
+  cohort1 <- tibble::tibble(
+    cohort_definition_id = c("1"),
+    subject_id = c("1"),
+    cohort_start_date = c(
+      as.Date(NA)
+    ),
+    cohort_end_date = c(
+      as.Date("2011-06-01")
+    )
+  )
+
+  cdm <- mockLargeScaleCharacteristics(
+    cohort1 = cohort1  )
+
+
+  expect_error(addLargeScaleCharacteristics(
+    x = cdm$cohort1,
+    cdm))
+
+  cohort1 <- tibble::tibble(
+    cohort_definition_id = c("1"),
+    subject_id = c("1"),
+    cohort_start_date = c(
+      as.Date("2011-06-01")
+    ),
+    cohort_end_date = c(
+      as.Date(NA)
+    )
+  )
+
+  cdm <- mockLargeScaleCharacteristics(
+    cohort1 = cohort1  )
+
+
+  expect_error(addLargeScaleCharacteristics(
+    x = cdm$cohort1,
+    cdm))
+
+  cohort1 <- tibble::tibble(
+    cohort_definition_id = NA,
+    subject_id = c("1"),
+    cohort_start_date = c(
+      as.Date("2011-06-01")
+    ),
+    cohort_end_date = c(
+      as.Date("2011-06-01")
+    )
+  )
+
+  cdm <- mockLargeScaleCharacteristics(
+    cohort1 = cohort1  )
+
+
+  expect_error(addLargeScaleCharacteristics(
+    x = cdm$cohort1,
+    cdm))
+
+  cohort1 <- tibble::tibble(
+    cohort_definition_id = "1",
+    subject_id = NA,
+    cohort_start_date = c(
+      as.Date("2011-06-01")
+    ),
+    cohort_end_date = c(
+      as.Date("2011-06-01")
+    )
+  )
+
+  cdm <- mockLargeScaleCharacteristics(
+    cohort1 = cohort1  )
+
+
+  expect_error(addLargeScaleCharacteristics(
+    x = cdm$cohort1,
+    cdm))
+})
+

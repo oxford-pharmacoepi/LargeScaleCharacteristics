@@ -129,6 +129,29 @@ getLargeScaleCharacteristics <- function(cdm,
     add = errorMessage
   )
 
+
+  #check input cohort cannot have missing in the following columns
+  checkmate::assertTRUE(
+    !checkmate::anyMissing(cdm[[targetCohortName]] %>% dplyr::pull("cohort_definition_id")),
+    add = errorMessage
+  )
+
+  checkmate::assertTRUE(
+    !checkmate::anyMissing(cdm[[targetCohortName]] %>% dplyr::pull("subject_id")),
+    add = errorMessage
+  )
+
+  checkmate::assertTRUE(
+    !checkmate::anyMissing(cdm[[targetCohortName]] %>% dplyr::pull("cohort_start_date")),
+    add = errorMessage
+  )
+
+  checkmate::assertTRUE(
+    !checkmate::anyMissing(cdm[[targetCohortName]] %>% dplyr::pull("cohort_end_date")),
+    add = errorMessage
+  )
+
+
   # check targetCohortId
   checkmate::assertIntegerish(
     targetCohortId,
@@ -389,12 +412,16 @@ getLargeScaleCharacteristics <- function(cdm,
       dplyr::mutate(cohort_definition_id = targetCohortId[k])
     if (k == 1) {
       characterizedCohortk <- characterizedCohort
-      denominatork <- denominator
+      denominatork <- denominator %>%
+        dplyr::select(-"cohort_definition_id") %>%
+        dplyr::distinct()
     } else {
       characterizedCohortk <- characterizedCohortk %>%
         dplyr::union_all(characterizedCohort)
       denominatork <- denominatork %>%
-        dplyr::union_all(denominator)
+        dplyr::union_all(denominator) %>%
+        dplyr::select(-"cohort_definition_id") %>%
+        dplyr::distinct()
     }
   }
   characterizedTables <- characterizedCohortk %>%
@@ -406,12 +433,14 @@ getLargeScaleCharacteristics <- function(cdm,
   subjects_denominator <- denominatork %>%
     dplyr::mutate(obscured_in_observation = dplyr::if_else(
       .data$denominator_count < .env$minimumCellCount, TRUE, FALSE
-    )) %>%
-    dplyr::relocate("cohort_definition_id", .before = "window_id")
+    ))
+  # %>%
+    # dplyr::relocate("cohort_definition_id", .before = "window_id")
 
   tablesToCharacterize <- tibble::tibble(
     table_id = seq(length(tablesToCharacterize)),
-    table_name = tablesToCharacterize
+    table_name = tablesToCharacterize,
+    overlap = overlap
   )
 
   characterizedTables <- characterizedTables %>%
@@ -429,13 +458,12 @@ getLargeScaleCharacteristics <- function(cdm,
       paste0("<", minimumCellCount),
       as.character(.data$denominator_count)
     )) %>%
-    dplyr::select("cohort_definition_id", "window_id", "denominator_count")
+    dplyr::select("window_id", "denominator_count")
 
   result <- characterizedTables %>%
     dplyr::left_join(tablesToCharacterize, by = "table_id") %>%
     dplyr::left_join(subjects_denominator,
       by = c(
-        "cohort_definition_id",
         "window_id"
       )
     ) %>%
@@ -443,7 +471,8 @@ getLargeScaleCharacteristics <- function(cdm,
     dplyr::select(
       "cohort_definition_id", "table_id", "table_name",
       "window_id", "window_name", "concept_id",
-      "concept_name", "concept_count", "denominator_count"
+      "concept_name", "concept_count", "denominator_count",
+      "overlap"
     ) %>%
     dplyr::mutate(concept_type = "Standard")
 

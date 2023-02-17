@@ -72,12 +72,12 @@ getLargeScaleCharacteristics(cdm,
   tablesToCharacterize = "drug_exposure"
 )
 #> # this is what the function output looks like:
-#> # A tibble: 3 × 10
-#>   cohort_definition_id table_id table_name    window_id window_name concept_id concept_name   concept_count denominator_count concept_type
-#>                  <dbl>    <int> <chr>             <int> <chr>            <dbl> <chr>          <chr>         <chr>             <chr>       
-#> 1                    1        1 drug_exposure         1 Any;-366             1 concept_name_1 <5            <5                Standard    
-#> 2                    1        1 drug_exposure         1 Any;-366             3 concept_name_3 <5            <5                Standard    
-#> 3                    1        1 drug_exposure         1 Any;-366             5 concept_name_5 <5            <5                Standard  
+#> # A tibble: 3 × 11
+#>   cohort_definition_id table_id table_name    window_id window_name concept_id concept_name   concept_count denominator_count overlap concept_type
+#>                  <dbl>    <int> <chr>             <int> <chr>            <dbl> <chr>          <chr>         <chr>             <lgl>   <chr>       
+#> 1                    1        1 drug_exposure         1 Any;-366             1 concept_name_1 <5            <5                TRUE    Standard    
+#> 2                    1        1 drug_exposure         1 Any;-366             3 concept_name_3 <5            <5                TRUE    Standard    
+#> 3                    1        1 drug_exposure         1 Any;-366             5 concept_name_5 <5            <5                TRUE    Standard  
 ```
 
 Package also allows you to add column to a cohort using table(s) interested in, with function addLargeScaleCharacteristics(). Here we show an example of add covariates from drug exposure table to cohort1. First we show there are 5 different drug_concept_id in drug exposure:
