@@ -53,13 +53,13 @@ obscured changing its value by NA. 'obscured' column of characterization
 tibble is TRUE when a count has been obscured. Otherwise it is FALSE.}
 }
 \value{
-The output of this function is a 3 elements list. First
-("Characterization") is a reference to a temporal table in the database. It
-contains the characterization of the desired cohorts of interest. The cohorts
-of interest are specified using 'targetCohortId' and 'targetCohortName'. The
-characterized tables are the ones specified in 'tablesToChacaterize'. Second
-("temporalWindows") contains the windows used to do the characaterization.
-Finally "overlap" is also included in the list.
+The output of this function is a table containing summary characteristics.
+Key information like temporalWindows considered will be output in columns
+window_id and window_name. tablesToChacaterize will be output in columns
+table_id and table_name. Concept information is output in columns
+concept_id, concept_name, concept_type and concept_count. Denominator information
+denominator_count is also reported. "overlap" setting is also included
+in the table for reference.
 }
 \description{
 Explain function

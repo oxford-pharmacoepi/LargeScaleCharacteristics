@@ -47,6 +47,13 @@
 #' @export
 #'
 #' @examples
+#' \dontrun{
+#' library(DBI)
+#' library(duckdb)
+#' library(LargeScaleCharacteristics)
+#' cdm <- mockLargeScaleCharacteristics()
+#' addLargeScaleCharacteristics(cdm$cohort1, cdm)
+#' }
 addLargeScaleCharacteristics <- function(x,
                                          cdm,
                                          temporalWindows = list(
@@ -350,7 +357,8 @@ addLargeScaleCharacteristics <- function(x,
     dplyr::left_join(characterizedCohortk_spread,
     by = c("person_id", "cohort_start_date", "cohort_end_date")
   ) %>% dplyr::rename("subject_id" = "person_id") %>%
-    dplyr::select(-c("observation_period_start_date", "observation_period_end_date")) %>% dplyr::compute()
+    dplyr::select(-c("observation_period_start_date", "observation_period_end_date")) %>%
+    dplyr::compute()
 
   result <- result %>% replace(is.na(.), 0)
 
