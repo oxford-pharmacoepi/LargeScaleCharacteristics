@@ -3,9 +3,6 @@ title: "Introduction to LargeScaleCharacteristic"
 author: "Marti Catala, Yuchen Guo"
 date: '2023-02-17'
 output:
-  pdf_document:
-    number_sections: yes
-    toc: yes
   html_document:
     number_sections: yes
     toc: yes
