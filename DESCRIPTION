@@ -14,7 +14,8 @@ Description: This packages computes the large scale characterization of the OMOP
 License: Apache License (>= 2)
 Encoding: UTF-8
 LazyData: true
-RoxygenNote: 7.2.1
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.2.3
 Imports:
     magrittr,
     rlang,
@@ -24,7 +25,12 @@ Imports:
     checkmate,
     DBI,
     duckdb,
-    lubridate
+    lubridate,
+    tibble,
+    tidyr
 Suggests: 
-    testthat
-    
+    testthat,
+    knitr,
+    rmarkdown,
+    tictoc
+VignetteBuilder: knitr

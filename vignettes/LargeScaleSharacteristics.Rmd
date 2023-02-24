@@ -1,0 +1,216 @@
+---
+title: "Introduction to LargeScaleCharacteristic"
+author: "Marti Catala, Yuchen Guo"
+date: '2023-02-17'
+output:
+  html_document:
+    number_sections: yes
+    toc: yes
+vignette: >
+  %\VignetteIndexEntry{Introduction to LargeScaleCharacteristic}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+library(LargeScaleCharacteristics)
+```
+
+
+## Introduction
+In this vignette we show the two functions in this package to get characteristics and/or covariates/features. The two functions in this package are:
+
+1)`getLargeScaleCharacteristics()` - this function will provide a summary of characteristics for your original cohort in tables interested, with regard to target windows.
+
+2)`addLargeScaleCharacteristics()` - this function will add extra columns to your original cohort, with covariates/features from tables interested.
+
+By tables interested, in this package we support the following OMOP Common Data Model (CDM) tables:
+  "visit_occurrence", "condition_occurrence", "drug_exposure", "procedure_occurrence", "device_exposure", "measurement", "observation", "drug_era", "condition_era" and "specimen"
+
+
+
+
+## Get summary characteristics using getLargeScaleCharacteristics
+Now we first show an example using getLargeScaleCharacteristics(). As LargeScaleCharacteristics package works with data mapped to the OMOP CDM and cdm object, we will first need to connect to a database, and use the CDMConnector package to represent our mapped data as a single cdm object in R. This could like something like:
+```{r eval=FALSE}
+con <- DBI::dbConnect(RPostgres::Postgres(),
+                      dbname = Sys.getenv("CDM5_POSTGRESQL_DBNAME"),
+                      host = Sys.getenv("CDM5_POSTGRESQL_HOST"),
+                      user = Sys.getenv("CDM5_POSTGRESQL_USER"),
+                      password = Sys.getenv("CDM5_POSTGRESQL_PASSWORD"))
+cdm <- CDMConnector::cdm_from_con(con,
+                                  cdm_schema = Sys.getenv("CDM5_POSTGRESQL_CDM_SCHEMA"))
+```
+For this example we´ll generate mock cdm data using `mockLargeScaleCharacteristics()` function. We first create a cdm object containing cohort1 (target cohort) and drug_exposure table (table to characterise)
+```r
+cohort1 <- tibble::tibble(
+  cohort_definition_id = c("1", "1"),
+  subject_id = c("1", "2"),
+  cohort_start_date = c(
+    as.Date("2010-04-01"),
+    as.Date("2010-04-01")
+  ),
+  cohort_end_date = c(
+    as.Date("2011-06-01"),
+    as.Date("2011-06-01")
+  )
+)
+
+drug_exposure <- tibble::tibble(
+  person_id = c("1", "2"),
+  drug_exposure_start_date = c(
+    as.Date("2009-05-01"),
+    as.Date("2009-05-01")
+  ),
+  drug_exposure_end_date = c(
+    as.Date("2010-03-03"),
+    as.Date("2010-03-03")
+  ),
+  drug_concept_id = c("1", "1")
+)
+
+cdm <- mockLargeScaleCharacteristics(
+  cohort1 = cohort1,
+  drug_exposure = drug_exposure
+)
+```
+
+The cdm object have tables look like this now:
+
+```r
+cdm$drug_exposure
+ # Source:   table<drug_exposure> [2 x 4]
+ # Database: DuckDB 0.5.0 [root@Darwin 21.3.0:R 4.2.1/:memory:]
+   person_id drug_exposure_start_date drug_exposure_end_date drug_concept_id
+   <chr>     <date>                   <date>                 <chr>          
+ 1 1         2009-05-01               2010-03-03             1              
+ 2 2         2009-05-01               2010-03-03             1   
+
+cdm$cohort1
+ # Source:   table<cohort1> [2 x 4]
+ # Database: DuckDB 0.5.0 [root@Darwin 21.3.0:R 4.2.1/:memory:]
+   cohort_definition_id subject_id cohort_start_date cohort_end_date
+   <chr>                <chr>      <date>            <date>         
+ 1 1                    1          2010-04-01        2011-06-01     
+ 2 1                    2          2010-04-01        2011-06-01    
+```
+Get large scale characteristic using function getLargeScaleCharacteristics() with output a tiblble with following columns: cohort_definition_id, table_id (in this case 1 as only characteristics from drug_exposure table are requested), window_id, window_name, concept_id, concept_name, concept_count, denominator_count, overlap and concept_type. Here we set minimumCellCount to 1 first, we demonstrate the count is the correct number we want. For this example, both person 1 & 2 has drug exposure record in windows: c(-365;-91), c(365;-31), c(90;-1), c(-30;-1). So we expect all concept_count and denominator_count to be 2. Below we run the getLargeScaleCharacteristics() function
+\tiny
+``` r
+getLargeScaleCharacteristics(cdm,
+                             targetCohortName = c("cohort1"),
+                             overlap = TRUE,
+                             tablesToCharacterize = "drug_exposure",
+                             minimumCellCount = 1
+)
+#> # this is what the function output looks like:
+#> # A tibble: 4 × 11
+#>   cohort_definition_id table_id table_name    window_id window_name concept_id concept_name   concept_count denominator_count overlap concept_type
+#>   <chr>                   <int> <chr>             <int> <chr>       <chr>      <chr>          <chr>         <chr>             <lgl>   <chr>       
+#> 1 1                           1 drug_exposure         2 -365;-91    1          concept_name_1 2             2                 TRUE    Standard    
+#> 2 1                           1 drug_exposure         3 -365;-31    1          concept_name_1 2             2                 TRUE    Standard    
+#> 3 1                           1 drug_exposure         4 -90;-1      1          concept_name_1 2             2                 TRUE    Standard    
+#> 4 1                           1 drug_exposure         5 -30;-1      1          concept_name_1 2             2                 TRUE    Standard    
+```
+\normalsize
+minimumCellCount is a variable you can set, and all counts lower than minimumCellCount will be output as '< minimumCellCount'. Here we run the same function but reset the minimumCellCount to 3. (With default this value is set to 5)
+\tiny
+``` r
+getLargeScaleCharacteristics(cdm,
+                             targetCohortName = c("cohort1"),
+                             overlap = TRUE,
+                             tablesToCharacterize = "drug_exposure",
+                             minimumCellCount = 3
+)
+#> # now the output looks like this:
+#>  A tibble: 4 × 11
+#>   cohort_definition_id table_id table_name    window_id window_name concept_id concept_name   concept_count denominator_count overlap concept_type
+#>   <chr>                   <int> <chr>             <int> <chr>       <chr>      <chr>          <chr>         <chr>             <lgl>   <chr>       
+#> 1 1                           1 drug_exposure         2 -365;-91    1          concept_name_1 <3            <3                TRUE    Standard    
+#> 2 1                           1 drug_exposure         3 -365;-31    1          concept_name_1 <3            <3                TRUE    Standard    
+#> 3 1                           1 drug_exposure         4 -90;-1      1          concept_name_1 <3            <3                TRUE    Standard    
+#> 4 1                           1 drug_exposure         5 -30;-1      1          concept_name_1 <3            <3                TRUE    Standard     
+```
+\normalsize
+## Add characteristics columns using addLargeScaleCharacteristics
+
+Package also allows you to add column to a cohort using table(s) interested in, with function addLargeScaleCharacteristics(). Here we show an example of add covariates from drug exposure table to cohort1. First we define a drug exposure table with 5 different drug_concept_id:
+
+\tiny
+``` r
+drug_exposure <- tibble::tibble(
+  person_id = c("1", "1", "1", "1", "1"),
+  drug_exposure_start_date = c(
+    as.Date("2009-05-01"),
+    as.Date("2009-05-01"),
+    as.Date("2009-05-01"),
+    as.Date("2009-05-01"),
+    as.Date("2009-05-01")
+  ),
+  drug_exposure_end_date = c(
+    as.Date("2010-03-03"),
+    as.Date("2010-03-03"),
+    as.Date("2010-03-03"),
+    as.Date("2010-03-03"),
+    as.Date("2010-03-03")
+  ),
+  drug_concept_id = c("1", "2", "3", "4", "5")
+)
+
+cdm <- mockLargeScaleCharacteristics(
+  cohort1 = cohort1,
+  drug_exposure = drug_exposure
+)
+
+cdm$drug_exposure %>% dplyr::select(drug_concept_id) %>% dplyr::distinct()
+#> # Source:   SQL [5 x 1]
+#> # Database: DuckDB 0.5.0 [root@Darwin 21.3.0:R 4.2.1/:memory:]
+#>   drug_concept_id
+#>             <dbl>
+#> 1               1
+#> 2               5
+#> 3               2
+#> 4               4
+#> 5               3
+```
+\normalsize
+Hence, the columns we are adding to cohort will have the name form of: {table_name}_{concept_id}_{window_name}. To demonstrate, we only select one window in each run separatemly, this example list(c(-30, -1)) and list(c(91, 365)). The result for window list(c(-30, -1)) looks like this. (NAs are generated as subject 2 is not in tablesToCharacterize (drug_exposure))
+\tiny
+``` r
+addLargeScaleCharacteristics(
+  x = cdm$cohort1,
+  cdm,
+  overlap = TRUE,
+  temporalWindows = list(c(-30, -1)),
+  tablesToCharacterize = c("drug_exposure")
+)
+#> The result for window list(c(-30, -1)) is like this: 
+#> # Source:   table<dbplyr_595> [2 x 8]
+#> # Database: DuckDB 0.5.0 [root@Darwin 21.3.0:R 4.2.1/:memory:]
+#>   subject_id cohort_start_date cohort_end_date `drug_exposure_5_-30;-1` `drug_exposure_4_-30;-1` `drug_exposure_3_…` `drug_exposure…` `drug_exposure…`
+#>   <chr>      <date>            <date>                             <dbl>                    <dbl>               <dbl>            <dbl>            <dbl>
+#> 1 1          2010-04-01        2011-06-01                             1                        1                   1                1                1
+#> 2 2          2010-04-01        2011-06-01                            NA                       NA                  NA               NA               NA
+```
+\normalsize
+Now the result for window list(c(91, 365)) looks like this. NAs are generated as subject 2 is not in tablesToCharacterize (drug_exposure). 0s are generated as subject 1 does not have drug exposure events fall in this window list(c(91, 365))
+\tiny
+```r
+addLargeScaleCharacteristics(
+  x = cdm$cohort1,
+  cdm,
+  overlap = TRUE,
+  temporalWindows = list(c(91, 365)),
+  tablesToCharacterize = c("drug_exposure")
+)
+#> Now result of window list(c(91, 365)) is like this: 
+#> # Source:   table<dbplyr_601> [2 x 8]
+#> # Database: DuckDB 0.5.0 [root@Darwin 21.3.0:R 4.2.1/:memory:]
+#>   subject_id cohort_start_date cohort_end_date `drug_exposure_5_91;365` `drug_exposure_4_91;365` `drug_exposure_3_…` `drug_exposure…` `drug_exposure…`
+#>   <chr>      <date>            <date>                             <dbl>                    <dbl>               <dbl>            <dbl>            <dbl>
+#> 1 1          2010-04-01        2011-06-01                             0                        0                   0                0                0
+#> 2 2          2010-04-01        2011-06-01                            NA                       NA                  NA               NA               NA
+
+```
+
+
+

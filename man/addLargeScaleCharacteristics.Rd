@@ -18,7 +18,7 @@ addLargeScaleCharacteristics(
 \item{x}{table}
 
 \item{cdm}{'cdm' object created with CDMConnector::cdm_from_con(). It must
-must contain the 'targetCohort' table and all the tables that we want to
+must contain the input x table and all the tables that we want to
 characterize. It is a compulsory input, no default value is provided.}
 
 \item{temporalWindows}{Temporal windows that we want to characterize. It must
