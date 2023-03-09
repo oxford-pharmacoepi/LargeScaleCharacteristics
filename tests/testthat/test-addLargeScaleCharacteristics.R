@@ -83,6 +83,59 @@ test_that("check more examples", {
 
 
 
+
+
+test_that("check minimumFrequency", {
+  cohort1 <- tibble::tibble(
+    cohort_definition_id = c("1"),
+    subject_id = c("1"),
+    cohort_start_date = c(
+      as.Date("2010-04-01")
+    ),
+    cohort_end_date = c(
+      as.Date("2011-06-01")
+    )
+  )
+  device_exposure <- tibble::tibble(
+    person_id = c("1"),
+    device_exposure_start_date = c(as.Date("2009-05-01")),
+    device_exposure_end_date = c(as.Date("2010-03-03")),
+    device_concept_id = c("1")
+  )
+
+  cdm <- mockLargeScaleCharacteristics(
+    cohort1 = cohort1,
+    device_exposure = device_exposure
+  )
+
+  check_minimumFrequency_0 <- addLargeScaleCharacteristics(
+    x = cdm$cohort1,
+    cdm,
+    overlap = TRUE,
+    temporalWindows = list(c(-365, -91),  c(-90, -1), c(-30, -1), c(NA, -366),
+                           c(0, 0), c(1, 30), c(1, 90)),
+    tablesToCharacterize = c("device_exposure")) %>% dplyr::collect()
+
+  check_minimumFrequency_05 <- addLargeScaleCharacteristics(
+    x = cdm$cohort1,
+    cdm,
+    overlap = TRUE,
+    temporalWindows = list(c(-365, -91),  c(-90, -1), c(-30, -1), c(NA, -366),
+                           c(0, 0), c(1, 30), c(1, 90)),
+    tablesToCharacterize = c("device_exposure"),
+    minimumFrequency = 0.5
+  ) %>% dplyr::collect()
+
+  expect_true(length(colnames(check_minimumFrequency_0))==10)
+
+  expect_true(length(colnames(check_minimumFrequency_05))==6)
+
+})
+
+
+
+
+
 test_that("check each supported table works", {
   cohort1 <- tibble::tibble(
     cohort_definition_id = c("1"),

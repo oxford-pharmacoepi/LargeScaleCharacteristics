@@ -64,3 +64,12 @@ in the table for reference.
 \description{
 Explain function
 }
+\examples{
+\dontrun{
+library(DBI)
+library(duckdb)
+library(LargeScaleCharacteristics)
+cdm <- mockLargeScaleCharacteristics()
+getLargeScaleCharacteristics(cdm, targetCohortName = c("cohort1"))
+}
+}

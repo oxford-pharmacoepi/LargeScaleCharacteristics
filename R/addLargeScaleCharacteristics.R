@@ -35,6 +35,8 @@
 #' "procedure_occurrence", "measurement").
 #' @param overlap Whether you want to consider overlapping events (overlap =
 #' TRUE) or only incident ones (overlap = FALSE).
+#' @param minimumFrequency the minimum frequency for concept id to be included in output. Can
+#' take a value between 0 and 1. By default: 0.
 #'
 #' @return The output of this function is a 3 elements list. First
 #' ("Characterization") is a reference to a temporal table in the database. It
@@ -66,7 +68,8 @@ addLargeScaleCharacteristics <- function(x,
                                            "condition_occurrence", "drug_era",
                                            "procedure_occurrence", "measurement"
                                          ),
-                                         overlap = TRUE) {
+                                         overlap = TRUE,
+                                         minimumFrequency = 0) {
   get_start_date <- list(
     "visit_occurrence" = "visit_start_date",
     "condition_occurrence" = "condition_start_date",
@@ -131,7 +134,7 @@ addLargeScaleCharacteristics <- function(x,
     add = errorMessage
   )
 
-  #check input cohort cannot have missing in the following columns
+  # check input cohort cannot have missing in the following columns
   checkmate::assertTRUE(
     !checkmate::anyMissing(x %>% dplyr::pull("cohort_definition_id")),
     add = errorMessage
@@ -181,6 +184,9 @@ addLargeScaleCharacteristics <- function(x,
 
   # overlap
   checkmate::assertLogical(overlap, any.missing = FALSE, add = errorMessage)
+
+  # minimumFrequency
+  checkmate::assert_numeric(minimumFrequency, lower = 0, upper = 1, add = errorMessage)
 
   # report collection of errors
   checkmate::reportAssertions(collection = errorMessage)
@@ -293,13 +299,13 @@ addLargeScaleCharacteristics <- function(x,
       ) %>%
       # get only the events that start before the end of the window
       dplyr::mutate(flag = dplyr::if_else(.data$flag != 0 & (is.na(
-        .data$window_end) | .data$days_difference_start <= .data$window_end), 1, 0)
-      ) %>%
+        .data$window_end
+      ) | .data$days_difference_start <= .data$window_end), 1, 0)) %>%
       # get only events that end/start (depending if overlap = TRUE/FALSE) after
       # the start of the window
       dplyr::mutate(flag = dplyr::if_else(.data$flag != 0 & (is.na(
-        .data$window_start) |.data$days_difference_end >= .data$window_start), .data$flag, 0)
-      ) %>%
+        .data$window_start
+      ) | .data$days_difference_end >= .data$window_start), .data$flag, 0)) %>%
       # get only distinct events per window id
       dplyr::select(
         "person_id", "cohort_start_date", "cohort_end_date", "window_id",
@@ -326,27 +332,45 @@ addLargeScaleCharacteristics <- function(x,
         )
     }
   }
+
   characterizedTables <- characterizedTables %>% dplyr::compute()
 
   # if we want to summarise the data we count the number of counts for each
   # event, window and table
-    characterizedCohort <- x %>%
-      dplyr::select(
-        "person_id" = "subject_id", "cohort_start_date", "cohort_end_date"
-      ) %>%
-      dplyr::inner_join(
-        characterizedTables,
-        by = c("person_id", "cohort_start_date", "cohort_end_date")
-      ) %>%
-      dplyr::compute()
+  characterizedCohort <- x %>%
+    dplyr::select(
+      "person_id" = "subject_id", "cohort_start_date", "cohort_end_date"
+    ) %>%
+    dplyr::inner_join(
+      characterizedTables,
+      by = c("person_id", "cohort_start_date", "cohort_end_date")
+    ) %>%
+    dplyr::compute()
 
+  n_subjects <- subjects %>% dplyr::count() %>% dplyr::pull()
+
+  countConcepts <- characterizedCohort %>%
+    dplyr::select("person_id", "window_id", "concept_id", "table_id", "flag") %>%
+    dplyr::filter(.data$flag != 0) %>%
+    dplyr::group_by(.data$window_id, .data$concept_id, .data$table_id) %>%
+    dplyr::summarise('conceptCount'=sum(.data$flag, na.rm = TRUE), .groups = "keep") %>%
+    dplyr::ungroup() %>%
+    dplyr::right_join(characterizedCohort, by = c( "window_id", "concept_id", "table_id")) %>%
+    dplyr::mutate(conceptCount = ifelse(is.na(.data$conceptCount), 0, .data$conceptCount)) %>%
+    dplyr::mutate(freq = .data$conceptCount/n_subjects) %>%
+    dplyr::filter(.data$freq >= .env$minimumFrequency) %>%
+    dplyr::select("person_id", "window_id", "concept_id", "table_id")
+
+
+  characterizedCohort <- characterizedCohort %>%
+    dplyr::inner_join(countConcepts,by = c( "person_id", "window_id", "concept_id", "table_id"))
 
   characterizedCohortk_spread <- characterizedCohort %>%
-    dplyr::full_join(temporalWindows %>% dplyr::select("window_id", "window_name"),
+    dplyr::left_join(temporalWindows %>% dplyr::select("window_id", "window_name"),
       by = "window_id",
       copy = TRUE
     ) %>%
-    dplyr::select(-c("window_id", "concept_name", "table_id"))  %>%
+    dplyr::select(-c("window_id", "concept_name", "table_id")) %>%
     tidyr::pivot_wider(
       names_from = c(table_name, concept_id, window_name),
       names_glue = "{table_name}_{concept_id}_{window_name}",
@@ -355,8 +379,9 @@ addLargeScaleCharacteristics <- function(x,
 
   result <- subjects %>%
     dplyr::left_join(characterizedCohortk_spread,
-    by = c("person_id", "cohort_start_date", "cohort_end_date")
-  ) %>% dplyr::rename("subject_id" = "person_id") %>%
+      by = c("person_id", "cohort_start_date", "cohort_end_date")
+    ) %>%
+    dplyr::rename("subject_id" = "person_id") %>%
     dplyr::select(-c("observation_period_start_date", "observation_period_end_date")) %>%
     dplyr::compute()
 
