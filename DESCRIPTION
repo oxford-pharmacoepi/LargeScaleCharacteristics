@@ -27,10 +27,10 @@ Imports:
     duckdb,
     lubridate,
     tibble,
-    tidyr
+    tidyr,
 Suggests: 
     testthat,
     knitr,
     rmarkdown,
-    tictoc
+    SqlRender
 VignetteBuilder: knitr

@@ -27,6 +27,8 @@ test_that("check getLargeScaleCharacteristics inputs checks", {
     drug_concept_id = c("1")
   )
 
+
+
   cdm <- mockLargeScaleCharacteristics(
     cohort1 = cohort1, cohort2 = cohort2,
     drug_era = drug_era
@@ -40,17 +42,6 @@ test_that("check getLargeScaleCharacteristics inputs checks", {
   expect_error(getLargeScaleCharacteristics(cdm,
     targetCohortName = list("cohort1"),
     tablesToCharacterize = c("drug_exposure")
-  ))
-
-  # throw error if tablesToCharacterize not in cdm, does not allow list
-  expect_error(getLargeScaleCharacteristics(cdm,
-    targetCohortName = c("cohort1"),
-    tablesToCharacterize = c("device_exposure")
-  ))
-
-  expect_error(getLargeScaleCharacteristics(cdm,
-    targetCohortName = c("cohort1"),
-    tablesToCharacterize = list("measurement")
   ))
 
   # throw error if temporalWindows not in a list

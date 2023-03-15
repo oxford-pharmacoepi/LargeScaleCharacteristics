@@ -8,12 +8,16 @@ mockLargeScaleCharacteristics(
   drug_exposure = NULL,
   drug_strength = NULL,
   observation_period = NULL,
+  observation = NULL,
   condition_occurrence = NULL,
   visit_occurrence = NULL,
   concept_ancestor = NULL,
   concept = NULL,
   measurement = NULL,
   drug_era = NULL,
+  condition_era = NULL,
+  specimen = NULL,
+  device_exposure = NULL,
   procedure_occurrence = NULL,
   person = NULL,
   cohort1 = NULL,
@@ -23,10 +27,12 @@ mockLargeScaleCharacteristics(
   concept_id_size = 5,
   ancestor_concept_id_size = 5,
   condition_concept_id_size = 5,
+  specimen_concept_id_size = 5,
   visit_concept_id_size = 5,
   visit_occurrence_id_size = 5,
   ingredient_concept_id_size = 1,
   procedure_occurrence_size = 5,
+  device_exposure_size = 5,
   drug_exposure_size = 10,
   patient_size = 5,
   min_drug_exposure_start_date = "2000-01-01",
@@ -56,6 +62,8 @@ mockLargeScaleCharacteristics(
 
 \item{observation_period}{default null user can define its own table}
 
+\item{observation}{default null user can define its own observation table}
+
 \item{condition_occurrence}{default null user can define its own table}
 
 \item{visit_occurrence}{default null user can define its own visit_occurrence table}
@@ -67,6 +75,12 @@ mockLargeScaleCharacteristics(
 \item{measurement}{the measurement table}
 
 \item{drug_era}{the drug_era table}
+
+\item{condition_era}{the condition_era table}
+
+\item{specimen}{the specimen table}
+
+\item{device_exposure}{the device_exposure table}
 
 \item{procedure_occurrence}{the procedure_occurrence table}
 
@@ -86,6 +100,8 @@ mockLargeScaleCharacteristics(
 
 \item{condition_concept_id_size}{number of unique row in the condition concept table}
 
+\item{specimen_concept_id_size}{the specimen_concept_id_size size}
+
 \item{visit_concept_id_size}{number of unique visit concept id}
 
 \item{visit_occurrence_id_size}{number of unique visit occurrence id}
@@ -93,6 +109,8 @@ mockLargeScaleCharacteristics(
 \item{ingredient_concept_id_size}{number of unique drug ingredient concept id}
 
 \item{procedure_occurrence_size}{number of procedure_occurrence}
+
+\item{device_exposure_size}{number of device_exposure_size}
 
 \item{drug_exposure_size}{number of unique drug exposure}
 
@@ -134,6 +152,7 @@ mockLargeScaleCharacteristics(
 
 \item{...}{user self defined tibble table to put in cdm, it can input as many as the user want}
 }
+
 \description{
 It creates a mock database for testing LargeScaleCharacteristics package
 }

@@ -7,8 +7,8 @@
 addLargeScaleCharacteristics(
   x,
   cdm,
-  temporalWindows = list(c(NA, -366), c(-365, -91), c(-365, -31), c(-90, -1), c(-30, -1),
-    c(0, 0), c(1, 30), c(1, 90), c(31, 365), c(91, 365), c(366, NA)),
+  temporalWindows = list(c(NA, -366), c(-365, -91), c(-365, -31), c(-90, -1), c(-30,
+    -1), c(0, 0), c(1, 30), c(1, 90), c(31, 365), c(91, 365), c(366, NA)),
   tablesToCharacterize = c("condition_occurrence", "drug_era", "procedure_occurrence",
     "measurement"),
   overlap = TRUE,
