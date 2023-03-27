@@ -18,7 +18,7 @@
 #' @param result table with the population summary, must have variables
 #' cohort_definition_id, variable, estimate and value
 #' @param minimumCellCount number below which the cell results are obscured, defautl: 5
-#' @param estimatesToObscure name estimates to obscure if below minimumCellCount, default: concept_count
+#' @param estimatesToObscure name estimates to obscure if below minimumCellCount, default: concept_count, denominator_count
 #'
 #' @return table with the required cells obscured
 #' @noRd
@@ -34,10 +34,10 @@
 #' summary_obscured <- obscureSummary(summary_c1)
 #' }
 #'
-supressCount <- function(result,
+suppressCount <- function(result,
                          minimumCellCount = 5,
                          cohort_definition_id = NULL,
-                         estimatesToObscure = "concept_count") {
+                         estimatesToObscure = c("concept_count", "denominator_count")) {
   ## check for standard types of user error
   errorMessage <- checkmate::makeAssertCollection()
   column1Check <- c("cohort_definition_id") %in% colnames(result)
@@ -62,19 +62,20 @@ supressCount <- function(result,
       dplyr::filter(cohort_definition_id %in% .env$cohort_definition_id)
   }else{result_to_obscure <- result}
 
-  result_to_obscure <- result_to_obscure %>% dplyr::rename(estimatesToObscure := !!estimatesToObscure)
 
-  result_to_obscure <- result_to_obscure %>%
-    dplyr::mutate(obscured_ind = dplyr::if_else(
-      .data$estimatesToObscure < .env$minimumCellCount, TRUE, FALSE
-    )) %>%
-    dplyr::mutate(estimatesToObscure = dplyr::if_else(.data$obscured_ind,
-      paste0("<", minimumCellCount),
-      as.character(.data$estimatesToObscure)
-    )) %>%
-    dplyr::rename(!!estimatesToObscure := estimatesToObscure) %>% dplyr::select(-c("obscured_ind"))
+  for (i in estimatesToObscure) {
+    result_to_obscure <- result_to_obscure %>%
+      dplyr::mutate(obscured_ind = dplyr::if_else(
+        .data[[i]] < .env$minimumCellCount, TRUE, FALSE
+      )) %>%
+      dplyr::mutate({{i}} := as.character(.data[[i]]))%>%
+      dplyr::mutate({{i}} := dplyr::if_else(.data$obscured_ind,
+                                            paste0("<", minimumCellCount),
+                                            .data[[i]]
+      )) %>% dplyr::select(-c("obscured_ind"))
+    }
 
-  result <- result %>% dplyr::select(-tidyselect::all_of(estimatesToObscure)) %>%
+  result <- result %>% dplyr::select(-dplyr::all_of({{estimatesToObscure}})) %>%
     dplyr::left_join(result_to_obscure)
 
   return(result)

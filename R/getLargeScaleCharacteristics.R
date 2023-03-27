@@ -41,10 +41,6 @@
 #' "procedure_occurrence", "measurement").
 #' @param overlap Whether you want to consider overlapping events (overlap =
 #' TRUE) or only incident ones (overlap = FALSE).
-#' @param minimumCellCount All counts lower than minimumCellCount will be
-#' obscured changing its value by NA. 'obscured' column of characterization
-#' tibble is TRUE when a count has been obscured. Otherwise it is FALSE.
-#'
 #' @return The output of this function is a table containing summary characteristics.
 #' Key information like temporalWindows considered will be output in columns
 #' window_id and window_name. tablesToChacaterize will be output in columns
@@ -75,8 +71,7 @@ getLargeScaleCharacteristics <- function(cdm,
                                            "condition_occurrence", "drug_era",
                                            "procedure_occurrence", "measurement"
                                          ),
-                                         overlap = TRUE,
-                                         minimumCellCount = 5) {
+                                         overlap = TRUE) {
   get_start_date <- list(
     "visit_occurrence" = "visit_start_date",
     "condition_occurrence" = "condition_start_date",
@@ -194,9 +189,6 @@ getLargeScaleCharacteristics <- function(cdm,
 
   # overlap
   checkmate::assertLogical(overlap, any.missing = FALSE, add = errorMessage)
-
-  # minimumCellCount
-  checkmate::assertCount(minimumCellCount, add = errorMessage, null.ok = TRUE)
 
   # report collection of errors
   checkmate::reportAssertions(collection = errorMessage)
@@ -439,12 +431,10 @@ getLargeScaleCharacteristics <- function(cdm,
       "cohort_definition_id", "table_id", "window_id", "concept_id",
       "concept_name", "concept_count"
     )
-  characterizedTables <- supressCount(characterizedTables, estimatesToObscure = "concept_count", minimumCellCount = minimumCellCount)
 
   denominatork <- denominatork %>%
     dplyr::select("window_id", "denominator_count", "cohort_definition_id")
 
-  denominatork <- supressCount(denominatork, estimatesToObscure = "denominator_count", minimumCellCount = minimumCellCount)
 
   result <- characterizedTables %>%
     dplyr::left_join(tablesToCharacterize, by = "table_id") %>%

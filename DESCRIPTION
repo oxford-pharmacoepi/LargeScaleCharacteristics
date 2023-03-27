@@ -27,8 +27,7 @@ Imports:
     duckdb,
     lubridate,
     tibble,
-    tidyr,
-    tidyselect
+    tidyr
 Suggests: 
     testthat,
     knitr,

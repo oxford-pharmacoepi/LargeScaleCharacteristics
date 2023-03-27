@@ -98,27 +98,11 @@ test_that("check getLargeScaleCharacteristics inputs checks", {
     )
   )
 
-  # throw error if minimumCellCount is character not integer, does not allow vector
-  expect_error(
-    getLargeScaleCharacteristics(cdm,
-      targetCohortName = c("cohort1"),
-      targetCohortId = 1,
-      temporalWindows = list(c(NA, -366)),
-      tablesToCharacterize = c("drug_exposure"),
-      overlap = TRUE,
-      minimumCellCount = "5"
-    )
-  )
-  expect_error(
-    getLargeScaleCharacteristics(cdm,
-      targetCohortName = c("cohort1"),
-      targetCohortId = 1,
-      temporalWindows = list(c(NA, -366)),
-      tablesToCharacterize = c("drug_exposure"),
-      overlap = TRUE,
-      minimumCellCount = c(1, 2)
-    )
-  )
+  cdm$device_exposure <- NULL
+  expect_error(getLargeScaleCharacteristics(cdm,
+    targetCohortName = c("cohort1"),
+    tablesToCharacterize = c("device_exposure")
+  ))
 })
 
 
@@ -425,61 +409,6 @@ test_that("check each supported table works", {
 
 
 
-test_that("check minimumCellCount works", {
-  cohort1 <- tibble::tibble(
-    cohort_definition_id = c("1"),
-    subject_id = c("1"),
-    cohort_start_date = c(
-      as.Date("2010-03-03")
-    ),
-    cohort_end_date = c(
-      as.Date("2012-01-01")
-    )
-  )
-  cohort2 <- tibble::tibble(
-    cohort_definition_id = c("1", "1", "1"),
-    subject_id = c("1", "2", "3"),
-    cohort_start_date = c(
-      as.Date("2000-03-03"), as.Date("2000-03-01"), as.Date("2000-02-01")
-    ),
-    cohort_end_date = c(
-      as.Date("2020-01-01"), as.Date("2020-01-01"), as.Date("2019-01-01")
-    )
-  )
-
-  drug_era <- tibble::tibble(
-    person_id = c("1"),
-    drug_era_start_date = c(as.Date("2000-03-03")),
-    drug_era_end_date = c(as.Date("2010-03-03")),
-    drug_concept_id = c("1")
-  )
-
-  cdm <- mockLargeScaleCharacteristics(
-    cohort1 = cohort1, cohort2 = cohort2,
-    drug_era = drug_era
-  )
-
-  minimumCellCount <- 2
-
-  result <- getLargeScaleCharacteristics(cdm,
-    targetCohortName = c("cohort1"),
-    overlap = TRUE,
-    tablesToCharacterize = "drug_era",
-    minimumCellCount = minimumCellCount
-  )
-
-  expect_true(unique(result$concept_count) == paste0("<", minimumCellCount))
-})
-
-
-
-
-
-
-
-
-
-
 
 
 test_that("check multiple target cohort IDs works", {
@@ -518,14 +447,12 @@ test_that("check multiple target cohort IDs works", {
     drug_era = drug_era
   )
 
-  minimumCellCount <- 2
-
   result <- getLargeScaleCharacteristics(cdm,
-                                         targetCohortName = c("cohort1"),
-                                         overlap = TRUE,
-                                         tablesToCharacterize = "drug_era",
-                                         minimumCellCount = minimumCellCount
+    targetCohortName = c("cohort1"),
+    overlap = TRUE,
+    tablesToCharacterize = "drug_era",
+    temporalWindows = list(c(1, 30))
   )
 
-  expect_true(unique(result$concept_count) == paste0("<", minimumCellCount))
+  expect_true(unique(result$cohort_definition_id) == 2)
 })
