@@ -152,7 +152,9 @@ mockLargeScaleCharacteristics(
 
 \item{...}{user self defined tibble table to put in cdm, it can input as many as the user want}
 }
+\value{
 
+}
 \description{
 It creates a mock database for testing LargeScaleCharacteristics package
 }

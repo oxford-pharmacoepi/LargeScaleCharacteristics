@@ -815,7 +815,8 @@ mockLargeScaleCharacteristics <- function(drug_exposure = NULL,
         "observation"
       ),
       write_schema = "main",
-      cohort_tables = c("cohort1", "cohort2", names(listTables))
+      cohort_tables = c("cohort1", "cohort2", names(listTables)),
+      cdm_name = "mock"
     )
   } else {
     cdm <- CDMConnector::cdm_from_con(
@@ -838,7 +839,8 @@ mockLargeScaleCharacteristics <- function(drug_exposure = NULL,
         "observation"
       ),
       write_schema = "main",
-      cohort_tables = c("cohort1", "cohort2")
+      cohort_tables = c("cohort1", "cohort2"),
+      cdm_name = "mock"
     )
   }
 

@@ -17,33 +17,27 @@
 #' This function is used to obscure small counts in population summary tables
 #' @param result table with the population summary, must have variables
 #' cohort_definition_id, variable, estimate and value
-#' @param minimumCellCounts number below which the cell results are obscured
-#' @param globalVariables variables for which whole cohorts are obscured if
-#' their estimatesToObscure are below the minimumCellCount
-#' @param estimatesToObscure estimates to obscure if below minimumCellCount
+#' @param minimumCellCount number below which the cell results are obscured, defautl: 5
+#' @param estimatesToObscure name estimates to obscure if below minimumCellCount, default: concept_count
 #'
 #' @return table with the required cells obscured
 #' @noRd
 #'
 #' @examples
-#'\dontrun{
+#' \dontrun{
 #' db <- DBI::dbConnect(" Your database connection here")
 #' cdm <- CDMConnector::cdm_from_con(
 #'   con = db,
 #'   cdm_schema = "cdm schema name"
 #' )
-#' summary_c1 <- getTableOne(cdm,cohort1)
+#' summary_c1 <- getTableOne(cdm, cohort1)
 #' summary_obscured <- obscureSummary(summary_c1)
 #' }
 #'
-#'
 supressCount <- function(result,
-                         minimumCellCounts = 5,
-                         globalVariables = c(
-                           "number_observations", "number_subjects"
-                         ),
-                         estimatesToObscure = "count") {
-
+                         minimumCellCount = 5,
+                         cohort_definition_id = NULL,
+                         estimatesToObscure = "concept_count") {
   ## check for standard types of user error
   errorMessage <- checkmate::makeAssertCollection()
   column1Check <- c("cohort_definition_id") %in% colnames(result)
@@ -52,52 +46,36 @@ supressCount <- function(result,
       "- `cohort_definition_id` is not a column of result"
     )
   }
-  column2Check <- c("variable") %in% colnames(result)
-  if (!isTRUE(column2Check)) {
-    errorMessage$push(
-      "- `variable` is not a column of result"
-    )
-  }
-  column3Check <- c("estimate") %in% colnames(result)
-  if (!isTRUE(column3Check)) {
-    errorMessage$push(
-      "- `estimate` is not a column of result"
-    )
-  }
-  column4Check <- c("value") %in% colnames(result)
-  if (!isTRUE(column4Check)) {
-    errorMessage$push(
-      "- `value` is not a column of result"
-    )
-  }
-  checkmate::assertIntegerish(minimumCellCounts, len = 1,
-                              add = errorMessage,
-  )
-  checkmate::assertCharacter(globalVariables,
-                             add = errorMessage,
+
+  checkmate::assertIntegerish(minimumCellCount,
+    len = 1,
+    add = errorMessage,
   )
   checkmate::assertCharacter(estimatesToObscure,
-                             add = errorMessage,
+    add = errorMessage,
   )
   checkmate::reportAssertions(collection = errorMessage)
 
   # Start code
-  values_to_osbcure <- suppressWarnings(as.numeric(result$value)) <
-    minimumCellCounts &
-    suppressWarnings(as.numeric(result$value)) > 0
-  obscured_values <- result$estimate %in% estimatesToObscure & values_to_osbcure
-  obscured_cohort <- unique(result$cohort_definition_id[
-    result$estimate %in% estimatesToObscure &
-      result$variable %in% globalVariables &
-      values_to_osbcure
-  ])
-  result$value[obscured_values] <- paste0("<", minimumCellCounts)
-  result$value[
-    result$cohort_definition_id %in% obscured_cohort
-  ] <- as.character(NA)
-  result$value[
-    result$cohort_definition_id %in% obscured_cohort &
-      result$variable %in% globalVariables
-  ] <- paste0("<", minimumCellCounts)
+  if (!is.null(cohort_definition_id)) {
+    result_to_obscure <- result %>%
+      dplyr::filter(cohort_definition_id %in% .env$cohort_definition_id)
+  }else{result_to_obscure <- result}
+
+  result_to_obscure <- result_to_obscure %>% dplyr::rename(estimatesToObscure := !!estimatesToObscure)
+
+  result_to_obscure <- result_to_obscure %>%
+    dplyr::mutate(obscured_ind = dplyr::if_else(
+      .data$estimatesToObscure < .env$minimumCellCount, TRUE, FALSE
+    )) %>%
+    dplyr::mutate(estimatesToObscure = dplyr::if_else(.data$obscured_ind,
+      paste0("<", minimumCellCount),
+      as.character(.data$estimatesToObscure)
+    )) %>%
+    dplyr::rename(!!estimatesToObscure := estimatesToObscure) %>% dplyr::select(-c("obscured_ind"))
+
+  result <- result %>% dplyr::select(-tidyselect::all_of(estimatesToObscure)) %>%
+    dplyr::left_join(result_to_obscure)
+
   return(result)
 }

@@ -136,7 +136,7 @@ getLargeScaleCharacteristics <- function(cdm,
   )
 
 
-  #check input cohort cannot have missing in the following columns
+  # check input cohort cannot have missing in the following columns
   checkmate::assertTRUE(
     !checkmate::anyMissing(cdm[[targetCohortName]] %>% dplyr::pull("cohort_definition_id")),
     add = errorMessage
@@ -196,7 +196,7 @@ getLargeScaleCharacteristics <- function(cdm,
   checkmate::assertLogical(overlap, any.missing = FALSE, add = errorMessage)
 
   # minimumCellCount
-  checkmate::assertCount(minimumCellCount, add = errorMessage)
+  checkmate::assertCount(minimumCellCount, add = errorMessage, null.ok = TRUE)
 
   # report collection of errors
   checkmate::reportAssertions(collection = errorMessage)
@@ -426,22 +426,6 @@ getLargeScaleCharacteristics <- function(cdm,
         dplyr::union_all(denominator)
     }
   }
-  characterizedTables <- characterizedCohortk %>%
-    dplyr::mutate(obscured_counts = dplyr::if_else(
-      .data$concept_count < .env$minimumCellCount, TRUE, FALSE
-    )) %>%
-    dplyr::relocate("cohort_definition_id", .before = "concept_id")
-
-  denominatork <- denominatork %>%
-    dplyr::select(-"cohort_definition_id") %>%
-    dplyr::distinct()
-
-  subjects_denominator <- denominatork %>%
-    dplyr::mutate(obscured_in_observation = dplyr::if_else(
-      .data$denominator_count < .env$minimumCellCount, TRUE, FALSE
-    ))
-  # %>%
-    # dplyr::relocate("cohort_definition_id", .before = "window_id")
 
   tablesToCharacterize <- tibble::tibble(
     table_id = seq(length(tablesToCharacterize)),
@@ -449,28 +433,24 @@ getLargeScaleCharacteristics <- function(cdm,
     overlap = overlap
   )
 
-  characterizedTables <- characterizedTables %>%
-    dplyr::mutate(concept_count = dplyr::if_else(.data$obscured_counts,
-      paste0("<", minimumCellCount),
-      as.character(.data$concept_count)
-    )) %>%
+  characterizedTables <- characterizedCohortk %>%
+    dplyr::relocate("cohort_definition_id", .before = "concept_id") %>%
     dplyr::select(
       "cohort_definition_id", "table_id", "window_id", "concept_id",
       "concept_name", "concept_count"
     )
+  characterizedTables <- supressCount(characterizedTables, estimatesToObscure = "concept_count", minimumCellCount = minimumCellCount)
 
-  subjects_denominator <- subjects_denominator %>%
-    dplyr::mutate(denominator_count = dplyr::if_else(.data$obscured_in_observation,
-      paste0("<", minimumCellCount),
-      as.character(.data$denominator_count)
-    )) %>%
-    dplyr::select("window_id", "denominator_count")
+  denominatork <- denominatork %>%
+    dplyr::select("window_id", "denominator_count", "cohort_definition_id")
+
+  denominatork <- supressCount(denominatork, estimatesToObscure = "denominator_count", minimumCellCount = minimumCellCount)
 
   result <- characterizedTables %>%
     dplyr::left_join(tablesToCharacterize, by = "table_id") %>%
-    dplyr::left_join(subjects_denominator,
+    dplyr::left_join(denominatork,
       by = c(
-        "window_id"
+        "window_id", "cohort_definition_id"
       )
     ) %>%
     dplyr::left_join(temporalWindows, by = "window_id") %>%
@@ -481,6 +461,15 @@ getLargeScaleCharacteristics <- function(cdm,
       "overlap"
     ) %>%
     dplyr::mutate(concept_type = "Standard")
+
+
+  result <- result %>%
+    dplyr::mutate(cdm_name = CDMConnector::cdmName(.env$cdm)) %>%
+    dplyr::mutate(cohort_name = .env$targetCohortName) %>%
+    dplyr::select("cohort_definition_id", "cohort_name", "table_name", "window_name", "concept_id",
+                  "concept_name", "concept_count", "denominator_count",
+                  "overlap", "concept_type", "cdm_name"
+    )
 
   return(result)
 }

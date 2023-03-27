@@ -28,6 +28,7 @@ Imports:
     lubridate,
     tibble,
     tidyr,
+    tidyselect
 Suggests: 
     testthat,
     knitr,
