@@ -233,7 +233,8 @@ addLargeScaleCharacteristics <- function(x,
           "observation_period_end_date"
         ),
       by = "person_id"
-    )
+    ) %>%
+    dplyr::compute()
 
   characterizedTable <- lapply(tablesToCharacterize, function(table_name) {
     overlap.k <- overlap[tablesToCharacterize == table_name]

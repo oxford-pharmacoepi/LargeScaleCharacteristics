@@ -245,7 +245,8 @@ getLargeScaleCharacteristics <- function(cdm,
           "observation_period_end_date"
         ),
       by = "person_id"
-    )
+    ) %>%
+    dplyr::compute()
 
   # for each one of the windows we get which are the subjects contributing to it
   subjects_denominator <- subjects %>%
