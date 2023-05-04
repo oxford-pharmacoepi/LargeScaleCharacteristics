@@ -39,8 +39,8 @@ test_that("check addLargeScaleCharacteristics overlap works", {
     tablesToCharacterize = c("drug_era")
   ) %>% dplyr::collect()
 
-  expect_true(result_allow_overlap$`drug_era_1_1;30` == 1)
-  expect_true(result_no_overlap$`drug_era_1_1;30` == 0)
+  expect_true(result_allow_overlap$`drug_era_1_1_to_30` == 1)
+  expect_true(result_no_overlap$`drug_era_1_1_to_30` == 0)
 })
 
 
@@ -72,7 +72,7 @@ test_that("check more examples", {
     x = cdm$cohort1,
     cdm,
     overlap = TRUE,
-    temporalWindows = list(c(-365, -91),  c(-90, -1), c(-30, -1), c(NA, -366),
+    temporalWindows = list(c(-365, -91),  c(-90, -1), c(-30, -1), c(-Inf, -366),
                            c(0, 0), c(1, 30), c(1, 90)),
     tablesToCharacterize = c("device_exposure")
   ) %>% dplyr::collect()
@@ -112,7 +112,7 @@ test_that("check minimumFrequency", {
     x = cdm$cohort1,
     cdm,
     overlap = TRUE,
-    temporalWindows = list(c(-365, -91),  c(-90, -1), c(-30, -1), c(NA, -366),
+    temporalWindows = list(c(-365, -91),  c(-90, -1), c(-30, -1), c(-Inf, -366),
                            c(0, 0), c(1, 30), c(1, 90)),
     tablesToCharacterize = c("device_exposure")) %>% dplyr::collect()
 
@@ -120,7 +120,7 @@ test_that("check minimumFrequency", {
     x = cdm$cohort1,
     cdm,
     overlap = TRUE,
-    temporalWindows = list(c(-365, -91),  c(-90, -1), c(-30, -1), c(NA, -366),
+    temporalWindows = list(c(-365, -91),  c(-90, -1), c(-30, -1), c(-Inf, -366),
                            c(0, 0), c(1, 30), c(1, 90)),
     tablesToCharacterize = c("device_exposure"),
     minimumFrequency = 0.5

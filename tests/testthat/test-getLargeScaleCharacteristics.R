@@ -44,18 +44,18 @@ test_that("check getLargeScaleCharacteristics inputs checks", {
     tablesToCharacterize = c("drug_exposure")
   ))
 
-  # throw error if temporalWindows not in a list
+  # throw error if temporalWindows wrong
   expect_error(
     getLargeScaleCharacteristics(cdm,
       targetCohortName = c("cohort1"),
-      temporalWindows = c(NA, -366),
+      temporalWindows = c(Inf, -366),
       tablesToCharacterize = c("drug_exposure")
     )
   )
   expect_no_error(
     getLargeScaleCharacteristics(cdm,
       targetCohortName = c("cohort1"),
-      temporalWindows = list(c(NA, -366)),
+      temporalWindows = list(c(-Inf, -366)),
       tablesToCharacterize = c("drug_exposure", "condition_occurrence")
     )
   )
@@ -64,7 +64,7 @@ test_that("check getLargeScaleCharacteristics inputs checks", {
   expect_error(
     getLargeScaleCharacteristics(cdm,
       targetCohortName = c("cohort1"),
-      temporalWindows = list(c(NA, -366)),
+      temporalWindows = list(c(-Inf, -366)),
       tablesToCharacterize = c("drug_exposure"),
       overlap = c(TRUE, TRUE)
     )
@@ -72,7 +72,7 @@ test_that("check getLargeScaleCharacteristics inputs checks", {
   expect_no_error(
     getLargeScaleCharacteristics(cdm,
       targetCohortName = c("cohort1"),
-      temporalWindows = list(c(NA, -366)),
+      temporalWindows = list(c(-Inf, -366)),
       tablesToCharacterize = c("drug_exposure", "condition_occurrence"),
       overlap = c(TRUE, TRUE)
     )
@@ -83,7 +83,7 @@ test_that("check getLargeScaleCharacteristics inputs checks", {
     getLargeScaleCharacteristics(cdm,
       targetCohortName = c("cohort1"),
       targetCohortId = "1",
-      temporalWindows = list(c(NA, -366)),
+      temporalWindows = list(c(-Inf, -366)),
       tablesToCharacterize = c("drug_exposure"),
       overlap = TRUE
     )
@@ -92,7 +92,7 @@ test_that("check getLargeScaleCharacteristics inputs checks", {
     getLargeScaleCharacteristics(cdm,
       targetCohortName = c("cohort1"),
       targetCohortId = c(1, 2),
-      temporalWindows = list(c(NA, -366)),
+      temporalWindows = list(c(-Inf, -366)),
       tablesToCharacterize = c("drug_exposure"),
       overlap = TRUE
     )
@@ -160,15 +160,15 @@ test_that("check overlap and drug era table works", {
     overlap = TRUE
   )
 
-  expect_true(result_allow_overlap[result_allow_overlap$window_name == "-365;-31", ]$concept_count == 7)
-  expect_true(result_allow_overlap[result_allow_overlap$window_name == "-365;-91", ]$concept_count == 7)
+  expect_true(result_allow_overlap[result_allow_overlap$window_name == "m365_to_m31", ]$concept_count == 7)
+  expect_true(result_allow_overlap[result_allow_overlap$window_name == "m365_to_m91", ]$concept_count == 7)
 
   result_no_overlap <- getLargeScaleCharacteristics(cdm,
     targetCohortName = c("cohort1"),
     tablesToCharacterize = c("drug_era"),
     overlap = FALSE
   )
-  expect_true(any(result_no_overlap$window_name == "-365;-31") == FALSE)
+  expect_true(any(result_no_overlap$window_name == "m365_to_m31") == FALSE)
 
   # test another cohort
   cohort1 <- tibble::tibble(
@@ -209,16 +209,16 @@ test_that("check overlap and drug era table works", {
     tablesToCharacterize = c("drug_era"),
     overlap = TRUE
   )
-  expect_true(result_allow_overlap[result_allow_overlap$window_name == "366;Any", ]$concept_count == 7)
-  expect_true(result_allow_overlap[result_allow_overlap$window_name == "31;365", ]$concept_count == 9)
-  expect_true(result_allow_overlap[result_allow_overlap$window_name == "91;365", ]$concept_count == 9)
+  expect_true(result_allow_overlap[result_allow_overlap$window_name == "366_to_inf", ]$concept_count == 7)
+  expect_true(result_allow_overlap[result_allow_overlap$window_name == "31_to_365", ]$concept_count == 9)
+  expect_true(result_allow_overlap[result_allow_overlap$window_name == "91_to_365", ]$concept_count == 9)
 
   result_no_overlap <- getLargeScaleCharacteristics(cdm,
     targetCohortName = c("cohort1"),
     tablesToCharacterize = c("drug_era"),
     overlap = FALSE
   )
-  expect_true(any(result_no_overlap$window_name == "366;Any") == FALSE)
+  expect_true(any(result_no_overlap$window_name == "366_to_inf") == FALSE)
 })
 
 

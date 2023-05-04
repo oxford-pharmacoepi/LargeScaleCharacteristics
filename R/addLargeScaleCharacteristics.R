@@ -59,10 +59,10 @@
 addLargeScaleCharacteristics <- function(x,
                                          cdm,
                                          temporalWindows = list(
-                                           c(NA, -366), c(-365, -91),
+                                           c(-Inf, -366), c(-365, -91),
                                            c(-365, -31), c(-90, -1), c(-30, -1),
                                            c(0, 0), c(1, 30), c(1, 90),
-                                           c(31, 365), c(91, 365), c(366, NA)
+                                           c(31, 365), c(91, 365), c(366, Inf)
                                          ),
                                          tablesToCharacterize = c(
                                            "condition_occurrence", "drug_era",
@@ -109,215 +109,36 @@ addLargeScaleCharacteristics <- function(x,
     "specimen" = "specimen_concept_id"
   )
 
-  errorMessage <- checkmate::makeAssertCollection()
 
   # check cdm
-  checkmate::assertClass(cdm, "cdm_reference", add = errorMessage)
+  checkCdm(cdm, tablesToCharacterize)
 
   # check x
-  xCheck <- inherits(x, "tbl_dbi")
-  if (!isTRUE(xCheck)) {
-    errorMessage$push(
-      "- x is not a table"
-    )
-  }
+  checkX(x)
 
+  #check tablesToCharacterize
+  checkTable(cdm, tablesToCharacterize)
 
-  # check that x has tables required
-  checkmate::assertTRUE(
-    all(c(
-      "cohort_definition_id",
-      "subject_id",
-      "cohort_start_date",
-      "cohort_end_date"
-    ) %in% colnames(x)),
-    add = errorMessage
-  )
-
-  # check input cohort cannot have missing in the following columns
-  checkmate::assertTRUE(
-    !checkmate::anyMissing(x %>% dplyr::pull("cohort_definition_id")),
-    add = errorMessage
-  )
-
-  checkmate::assertTRUE(
-    !checkmate::anyMissing(x %>% dplyr::pull("subject_id")),
-    add = errorMessage
-  )
-
-  checkmate::assertTRUE(
-    !checkmate::anyMissing(x %>% dplyr::pull("cohort_start_date")),
-    add = errorMessage
-  )
-
-  checkmate::assertTRUE(
-    !checkmate::anyMissing(x %>% dplyr::pull("cohort_end_date")),
-    add = errorMessage
-  )
-
-
-  # check temporalWindows
-  checkmate::assertList(temporalWindows, min.len = 1, add = errorMessage)
-  checkmate::assertTRUE(
-    all(unlist(lapply(temporalWindows, length)) == 2),
-    add = errorMessage
-  )
-
-  # check tablesToCharacterize
-  checkmate::assertCharacter(
-    tablesToCharacterize,
-    min.len = 1,
-    add = errorMessage
-  )
-  checkmate::assertTRUE(
-    all(tablesToCharacterize %in% names(cdm)),
-    add = errorMessage
-  )
-  checkmate::assertTRUE(
-    all(tablesToCharacterize %in% c(
-      "visit_occurrence", "condition_occurrence", "drug_exposure",
-      "procedure_occurrence", "device_exposure", "measurement", "observation",
-      "drug_era", "condition_era", "specimen"
-    )),
-    add = errorMessage
-  )
-
-  # overlap
-  checkmate::assertLogical(overlap, any.missing = FALSE, add = errorMessage)
+  temporalWindows <- checkWindow(temporalWindows)
 
   # minimumFrequency
-  checkmate::assert_numeric(minimumFrequency, lower = 0, upper = 1, add = errorMessage)
+  checkmate::assert_numeric(minimumFrequency, lower = 0, upper = 1)
 
-  # report collection of errors
-  checkmate::reportAssertions(collection = errorMessage)
-
-  if (length(overlap) > 1) {
-    if (length(overlap) != length(tablesToCharacterize)) {
-      stop("If length(overlap)>1 then length(overlap) = length(tablesToCharacterize)")
-    }
-  } else {
-    overlap <- rep(overlap, length(tablesToCharacterize))
-  }
-
-  # write temporal windows tibble
-  temporalWindows <- lapply(temporalWindows, function(x) {
-    nam <- paste0(
-      ifelse(is.na(x[1]), "Any", x[1]),
-      ";",
-      ifelse(is.na(x[2]), "Any", x[2])
-    )
-    x <- dplyr::tibble(
-      window_start = x[1], window_end = x[2], window_name = nam
-    )
-    return(x)
-  }) %>%
-    dplyr::bind_rows() %>%
-    dplyr::mutate(window_id = dplyr::row_number()) %>%
-    dplyr::select("window_id", "window_name", "window_start", "window_end")
-
-
+  # overlap
+  overlap <- checkOverlap(overlap, tablesToCharacterize)
 
   # get the distinct subjects with their observation period
-  subjects <- x %>%
-    dplyr::select(
-      "person_id" = "subject_id",
-      "cohort_start_date",
-      "cohort_end_date"
-    ) %>%
-    dplyr::distinct() %>%
-    dplyr::left_join(
-      cdm[["observation_period"]] %>%
-        dplyr::select(
-          "person_id",
-          "observation_period_start_date",
-          "observation_period_end_date"
-        ),
-      by = "person_id"
-    ) %>%
-    dplyr::compute()
+  subjects <- getSubjects(cdm, x)
 
   characterizedTable <- lapply(tablesToCharacterize, function(table_name) {
+    study_table <- subSetTable(cdm[[table_name]], subjects)
+
     overlap.k <- overlap[tablesToCharacterize == table_name]
-    # get start date depending on the table
-    start_date <- get_start_date[[table_name]]
-    # get end date depending on the table
-    end_date <- get_end_date[[table_name]]
-    # get concept id depending on the table
-    concept_id <- get_concept[[table_name]]
-    # subset the table to the study subjects
-    study_table <- cdm[[table_name]] %>%
-      dplyr::inner_join(subjects, by = "person_id") %>%
-      # rename start date
-      dplyr::rename("start_date" = .env$start_date)
-    # rename or create end date
-    if (is.null(end_date) || isFALSE(overlap.k)) {
-      study_table <- study_table %>%
-        dplyr::mutate(end_date = .data$start_date)
-    } else {
-      study_table <- study_table %>%
-        dplyr::rename("end_date" = .env$end_date)
-    }
-    study_table <- study_table %>%
-      # rename concept id and get concept name
-      dplyr::rename("concept_id" = .env$concept_id) %>%
-      dplyr::mutate(table_name = table_name) %>%
-      dplyr::filter(concept_id != 0) %>%
-      dplyr::left_join(
-        cdm$concept %>%
-          dplyr::select("concept_id", "concept_name"),
-        by = "concept_id"
-      ) %>%
-      # obtain observations inside the observation period only
-      dplyr::mutate(flag = dplyr::if_else(.data$start_date <= .data$observation_period_end_date, 1, 0)) %>%
-      dplyr::mutate(flag = dplyr::if_else(.data$end_date >= .data$observation_period_start_date, .data$flag, 0)) %>%
-      # obtain the time difference between the start of the event and the
-      # cohort start date
-      dplyr::mutate(days_difference_start = dbplyr::sql(CDMConnector::datediff(
-        start = "cohort_start_date",
-        end = "start_date"
-      )))
-    # obtain the time difference between the end of the event and the cohort
-    # start date
-    if (is.null(end_date) || isFALSE(overlap.k)) {
-      study_table <- study_table %>%
-        dplyr::mutate(days_difference_end = .data$days_difference_start)
-    } else {
-      study_table <- study_table %>%
-        dplyr::mutate(days_difference_end = dbplyr::sql(CDMConnector::datediff(
-          start = "cohort_start_date",
-          end = "end_date"
-        )))
-    }
-    study_table <- study_table %>%
-      # merge the table that we want to characterize with all the temporal
-      # windows
-      dplyr::mutate(to_merge = 1) %>%
-      dplyr::inner_join(
-        temporalWindows %>%
-          dplyr::mutate(to_merge = 1),
-        by = "to_merge",
-        copy = TRUE
-      ) %>%
-      # get only the events that start before the end of the window
-      dplyr::mutate(flag = dplyr::if_else(.data$flag != 0 & (is.na(
-        .data$window_end
-      ) | .data$days_difference_start <= .data$window_end), 1, 0)) %>%
-      # get only events that end/start (depending if overlap = TRUE/FALSE) after
-      # the start of the window
-      dplyr::mutate(flag = dplyr::if_else(.data$flag != 0 & (is.na(
-        .data$window_start
-      ) | .data$days_difference_end >= .data$window_start), .data$flag, 0)) %>%
-      # get only distinct events per window id
-      dplyr::select(
-        "person_id", "cohort_start_date", "cohort_end_date", "window_id",
-        "concept_id", "concept_name", "table_name", "flag"
-      ) %>%
-      dplyr::distinct() %>%
-      dplyr::compute()
+
+    study_table <- addFlag(cdm, study_table, table_name, overlap.k, temporalWindows)
 
     return(study_table)
   })
-
 
 
   # union all the tables into a temporal table
@@ -368,8 +189,8 @@ addLargeScaleCharacteristics <- function(x,
 
   characterizedCohortk_spread <- characterizedCohort %>%
     dplyr::left_join(temporalWindows %>% dplyr::select("window_id", "window_name"),
-      by = "window_id",
-      copy = TRUE
+                     by = "window_id",
+                     copy = TRUE
     ) %>%
     dplyr::select(-c("window_id", "concept_name", "table_id")) %>%
     tidyr::pivot_wider(
@@ -380,7 +201,7 @@ addLargeScaleCharacteristics <- function(x,
 
   result <- subjects %>%
     dplyr::left_join(characterizedCohortk_spread,
-      by = c("person_id", "cohort_start_date", "cohort_end_date")
+                     by = c("person_id", "cohort_start_date", "cohort_end_date")
     ) %>%
     dplyr::rename("subject_id" = "person_id") %>%
     dplyr::select(-c("observation_period_start_date", "observation_period_end_date")) %>%
