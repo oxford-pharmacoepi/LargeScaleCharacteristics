@@ -38,94 +38,160 @@ namesTable <- read_csv(
 )
 
 
-subSetTable <- function(x, subjects){
+subSetTable <- function(cdm, subjects, tablesToCharacterize, windows, targetCohort, overlap){
 
-  study_table <- x %>%
-    dplyr::inner_join(subjects, by = "person_id")
-  return(study_table)
+  characterizedTable <- NULL
+
+  for(i in 1:length(tablesToCharacterize$table_name)){
+    table_name <- tablesToCharacterize$table_name[i]
+
+    subjects <- getSubjects(cdm, targetCohort)
+
+    subsetedTable <- cdm[[table_name]] %>%
+      dplyr::inner_join(subjects, by = "person_id")
+
+    overlap.k <- overlap[tablesToCharacterize == table_name]
+
+    start_date <- namesTable$start_date_name[namesTable$table_name == table_name]
+    # get end date depending on the table
+    end_date <- namesTable$end_date_name[namesTable$table_name == table_name]
+    # get concept id depending on the table
+    concept_id <- namesTable$concept_id_name[namesTable$table_name == table_name]
+
+    subsetedTable <- subsetedTable %>%
+      # rename start date
+      dplyr::rename("start_date" = .env$start_date)
+
+    # rename or create end date
+    if (is.na(end_date) || isFALSE(overlap)) {
+      subsetedTable <- subsetedTable %>%
+        dplyr::mutate(end_date = .data$start_date)
+    } else {
+      subsetedTable <- subsetedTable %>%
+        dplyr::rename("end_date" = .env$end_date)
+    }
+    subsetedTable <- subsetedTable %>%
+      # rename concept id and get concept name
+      dplyr::rename("concept_id" = .env$concept_id) %>%
+      dplyr::left_join(
+        cdm$concept %>%
+          dplyr::select("concept_id", "concept_name"),
+        by = "concept_id"
+      ) %>%
+      # obtain observations inside the observation period only
+      dplyr::filter(.data$start_date <= .data$observation_period_end_date) %>%
+      dplyr::filter(.data$end_date >= .data$observation_period_start_date) %>%
+      # obtain the time difference between the start of the event and the
+      # cohort start date
+      dplyr::mutate(days_difference_start = dbplyr::sql(CDMConnector::datediff(
+        start = "cohort_start_date",
+        end = "start_date"
+      )))
+
+    # obtain the time difference between the end of the event and the cohort
+    # start date
+    if (is.na(end_date) || isFALSE(overlap)) {
+      subsetedTable <- subsetedTable %>%
+        dplyr::mutate(days_difference_end = .data$days_difference_start)
+    } else {
+      subsetedTable <- subsetedTable %>%
+        dplyr::mutate(days_difference_end = dbplyr::sql(CDMConnector::datediff(
+          start = "cohort_start_date",
+          end = "end_date"
+        )))
+    }
+
+    subsetedTable <- subsetedTable %>%
+      # merge the table that we want to characterize with all the temporal
+      # windows
+      dplyr::mutate(to_merge = 1) %>%
+      dplyr::inner_join(
+        windows %>%
+          dplyr::mutate(to_merge = 1),
+        by = "to_merge",
+        copy = TRUE
+      ) %>%
+      # get only the events that start before the end of the window
+      dplyr::filter(
+        is.infinite(.data$upper) |
+          .data$days_difference_start <= .data$upper
+      ) %>%
+      # get only events that end/start (depending if overlap = TRUE/FALSE) after
+      # the start of the window
+      dplyr::filter(
+        is.infinite(.data$lower) |
+          .data$days_difference_end >= .data$lower
+      ) %>%
+      # get only distinct events per window id
+      dplyr::select(
+        "person_id", "cohort_start_date", "cohort_end_date", "window_id",
+        "concept_id", "concept_name"
+      ) %>%
+      dplyr::distinct() %>%
+      dplyr::mutate(table_name = table_name)%>%
+      dplyr::compute()
+
+    characterizedTable[[i]] <- subsetedTable
+
+  }
+
+
+  # union all the tables into a temporal table
+  for (i in 1:length(characterizedTable)) {
+    if (i == 1) {
+      characterizedTables <- characterizedTable[[i]] %>%
+        dplyr::mutate(table_id = .env$i)
+    } else {
+      characterizedTables <- characterizedTables %>%
+        dplyr::union_all(
+          characterizedTable[[i]] %>%
+            dplyr::mutate(table_id = .env$i)
+        )
+    }
+  }
+  characterizedTables <- characterizedTables %>% dplyr::compute()
+  return(characterizedTables)
 
 }
 
-getCounts <- function(cdm, subsetedTable, table_name, overlap, windows)
+getCounts <- function(cdm, targetCohort, targetCohortId, characterizedTables)
 {
-  start_date <- namesTable$start_date_name[namesTable$table_name == table_name]
-  # get end date depending on the table
-  end_date <- namesTable$end_date_name[namesTable$table_name == table_name]
-  # get concept id depending on the table
-  concept_id <- namesTable$concept_id_name[namesTable$table_name == table_name]
 
-  subsetedTable <- subsetedTable %>%
-    # rename start date
-    dplyr::rename("start_date" = .env$start_date)
 
-  # rename or create end date
-  if (is.na(end_date) || isFALSE(overlap)) {
-    subsetedTable <- subsetedTable %>%
-      dplyr::mutate(end_date = .data$start_date)
-  } else {
-    subsetedTable <- subsetedTable %>%
-      dplyr::rename("end_date" = .env$end_date)
+  for (k in 1:length(targetCohortId)) {
+    characterizedCohort <- targetCohort %>%
+      dplyr::filter(.data$cohort_definition_id == !!targetCohortId[k]) %>%
+      dplyr::select(
+        "person_id" = "subject_id", "cohort_start_date", "cohort_end_date"
+      ) %>%
+      dplyr::inner_join(
+        characterizedTables,
+        by = c("person_id", "cohort_start_date", "cohort_end_date")
+      ) %>%
+      dplyr::group_by(.data$concept_id, .data$concept_name, .data$window_id, .data$table_id, .data$table_name) %>%
+      dplyr::tally() %>%
+      dplyr::ungroup() %>%
+      dplyr::rename("concept_count" = "n") %>%
+      dplyr::collect() %>%
+      dplyr::mutate(cohort_definition_id = targetCohortId[k])
+    if (k == 1) {
+      characterizedCohortk <- characterizedCohort
+    } else {
+      characterizedCohortk <- characterizedCohortk %>%
+        dplyr::union_all(characterizedCohort)
+    }
   }
-  subsetedTable <- subsetedTable %>%
-    # rename concept id and get concept name
-    dplyr::rename("concept_id" = .env$concept_id) %>%
-    dplyr::left_join(
-      cdm$concept %>%
-        dplyr::select("concept_id", "concept_name"),
-      by = "concept_id"
-    ) %>%
-    # obtain observations inside the observation period only
-    dplyr::filter(.data$start_date <= .data$observation_period_end_date) %>%
-    dplyr::filter(.data$end_date >= .data$observation_period_start_date) %>%
-    # obtain the time difference between the start of the event and the
-    # cohort start date
-    dplyr::mutate(days_difference_start = dbplyr::sql(CDMConnector::datediff(
-      start = "cohort_start_date",
-      end = "start_date"
-    )))
-  # obtain the time difference between the end of the event and the cohort
-  # start date
-  if (is.na(end_date) || isFALSE(overlap)) {
-    subsetedTable <- subsetedTable %>%
-      dplyr::mutate(days_difference_end = .data$days_difference_start)
-  } else {
-    subsetedTable <- subsetedTable %>%
-      dplyr::mutate(days_difference_end = dbplyr::sql(CDMConnector::datediff(
-        start = "cohort_start_date",
-        end = "end_date"
-      )))
-  }
-  subsetedTable <- subsetedTable %>%
-    # merge the table that we want to characterize with all the temporal
-    # windows
-    dplyr::mutate(to_merge = 1) %>%
-    dplyr::inner_join(
-      windows %>%
-        dplyr::mutate(to_merge = 1),
-      by = "to_merge",
-      copy = TRUE
-    ) %>%
-    # get only the events that start before the end of the window
-    dplyr::filter(
-      is.infinite(.data$upper) |
-        .data$days_difference_start <= .data$upper
-    ) %>%
-    # get only events that end/start (depending if overlap = TRUE/FALSE) after
-    # the start of the window
-    dplyr::filter(
-      is.infinite(.data$lower) |
-        .data$days_difference_end >= .data$lower
-    ) %>%
-    # get only distinct events per window id
+
+
+
+  characterizedTables <- characterizedCohortk %>%
+    dplyr::relocate("cohort_definition_id", .before = "concept_id") %>%
     dplyr::select(
-      "person_id", "cohort_start_date", "cohort_end_date", "window_id",
-      "concept_id", "concept_name"
-    ) %>%
-    dplyr::distinct() %>%
-    dplyr::compute() %>%
-    dplyr::mutate(table_name = table_name)
+      "cohort_definition_id", "table_id", "window_id", "concept_id",
+      "concept_name", "concept_count", "table_name"
+    )
 
-  return(subsetedTable)
+  return(characterizedTables)
 }
 
 
@@ -204,8 +270,13 @@ calculateDenominators <- function(cdm,
 
 
 
-addFlag <- function(cdm, subsetedTable, table_name, overlap, windows)
+addFlag <- function(cdm, subjects, table_name, overlap, windows)
 {
+
+  subsetedTable <- cdm[[table_name]] %>%
+    dplyr::inner_join(subjects, by = "person_id")
+
+
   start_date <- namesTable$start_date_name[namesTable$table_name == table_name]
   # get end date depending on the table
   end_date <- namesTable$end_date_name[namesTable$table_name == table_name]

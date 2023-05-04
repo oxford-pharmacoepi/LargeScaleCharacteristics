@@ -97,61 +97,6 @@ getLargeScaleCharacteristics <- function(cdm,
                                         temporalWindows)
 
 
-  subjects <- getSubjects(cdm, targetCohort)
-
-  # get the codes observed in each window for each one of the subjects, only
-  # events in the observation window will be observed. The result is a
-  # temporary table in the database
-  characterizedTable <- lapply(tablesToCharacterize, function(table_name) {
-    study_table <- subSetTable(cdm[[table_name]], subjects)
-
-    overlap.k <- overlap[tablesToCharacterize == table_name]
-
-    getCounts(cdm, study_table, table_name, overlap.k, temporalWindows)
-  })
-
-  # union all the tables into a temporal table
-  for (i in 1:length(characterizedTable)) {
-    if (i == 1) {
-      characterizedTables <- characterizedTable[[i]] %>%
-        dplyr::mutate(table_id = .env$i)
-    } else {
-      characterizedTables <- characterizedTables %>%
-        dplyr::union_all(
-          characterizedTable[[i]] %>%
-            dplyr::mutate(table_id = .env$i)
-        )
-    }
-  }
-  characterizedTables <- characterizedTables %>% dplyr::compute()
-
-
-
-  # if we want to summarise the data we count the number of counts for each
-  # event, window and table
-  for (k in 1:length(targetCohortId)) {
-    characterizedCohort <- targetCohort %>%
-      dplyr::filter(.data$cohort_definition_id == !!targetCohortId[k]) %>%
-      dplyr::select(
-        "person_id" = "subject_id", "cohort_start_date", "cohort_end_date"
-      ) %>%
-      dplyr::inner_join(
-        characterizedTables,
-        by = c("person_id", "cohort_start_date", "cohort_end_date")
-      ) %>%
-      dplyr::group_by(.data$concept_id, .data$concept_name, .data$window_id, .data$table_id, .data$table_name) %>%
-      dplyr::tally() %>%
-      dplyr::ungroup() %>%
-      dplyr::rename("concept_count" = "n") %>%
-      dplyr::collect() %>%
-      dplyr::mutate(cohort_definition_id = targetCohortId[k])
-    if (k == 1) {
-      characterizedCohortk <- characterizedCohort
-    } else {
-      characterizedCohortk <- characterizedCohortk %>%
-        dplyr::union_all(characterizedCohort)
-    }
-  }
 
   tablesToCharacterize <- tibble::tibble(
     table_id = seq(length(tablesToCharacterize)),
@@ -159,14 +104,16 @@ getLargeScaleCharacteristics <- function(cdm,
     overlap = overlap
   )
 
-  characterizedTables <- characterizedCohortk %>%
-    dplyr::relocate("cohort_definition_id", .before = "concept_id") %>%
-    dplyr::select(
-      "cohort_definition_id", "table_id", "window_id", "concept_id",
-      "concept_name", "concept_count", "table_name"
-    )
+
+  subSetTables <- subSetTable(cdm, subjects, tablesToCharacterize, temporalWindows, targetCohort, overlap)
+
+  characterizedTables <- getCounts(cdm, targetCohort, targetCohortId, subSetTables)
 
 
+
+
+  # if we want to summarise the data we count the number of counts for each
+  # event, window and table
   result <- characterizedTables %>%
     dplyr::left_join(tablesToCharacterize, by = c("table_id", "table_name")) %>%
     dplyr::left_join(denominatork,

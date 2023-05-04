@@ -131,11 +131,10 @@ addLargeScaleCharacteristics <- function(x,
   subjects <- getSubjects(cdm, x)
 
   characterizedTable <- lapply(tablesToCharacterize, function(table_name) {
-    study_table <- subSetTable(cdm[[table_name]], subjects)
 
     overlap.k <- overlap[tablesToCharacterize == table_name]
 
-    study_table <- addFlag(cdm, study_table, table_name, overlap.k, temporalWindows)
+    study_table <- addFlag(cdm, subjects, table_name, overlap.k, temporalWindows)
 
     return(study_table)
   })
