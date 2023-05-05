@@ -105,11 +105,29 @@ getLargeScaleCharacteristics <- function(cdm,
   )
 
 
-  subSetTables <- subSetTable(cdm, subjects, tablesToCharacterize, temporalWindows, targetCohort, overlap)
+  subsetedTable <- NULL
 
-  characterizedTables <- getCounts(cdm, targetCohort, targetCohortId, subSetTables)
+  for (i in 1:length(tablesToCharacterize$table_name)) {
 
+    subsetedTable[[i]] <- subSetTable(cdm, subjects, tablesToCharacterize, i,
+                                      windows = temporalWindows, targetCohort, overlap)
+    }
 
+  # union all the tables into a temporal table
+  for (i in 1:length(subsetedTable)) {
+    if (i == 1) {
+      subsetedTables <- subsetedTable[[i]] %>%
+        dplyr::mutate(table_id = .env$i)%>% dplyr::compute()
+    } else {
+      subsetedTables <- subsetedTables %>%
+        dplyr::union_all(
+          subsetedTable[[i]] %>%
+            dplyr::mutate(table_id = .env$i)
+        )%>% dplyr::compute()
+    }
+  }
+
+  characterizedTables <- getCounts(cdm, targetCohort, targetCohortId, subsetedTables)
 
 
   # if we want to summarise the data we count the number of counts for each

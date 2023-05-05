@@ -12,16 +12,16 @@ getSubjects <- function(cdm,
       "cohort_end_date"
     ) %>%
     dplyr::distinct() %>%
-      dplyr::inner_join(
-        cdm[["observation_period"]] %>%
-          dplyr::select(
-            "person_id",
-            "observation_period_start_date",
-            "observation_period_end_date"
-          ),
-        by = "person_id"
-      ) %>%
-      dplyr::compute()
+    dplyr::inner_join(
+      cdm[["observation_period"]] %>%
+        dplyr::select(
+          "person_id",
+          "observation_period_start_date",
+          "observation_period_end_date"
+        ),
+      by = "person_id"
+    ) %>%
+    dplyr::compute()
 
   return(subjects)
 }
@@ -38,11 +38,8 @@ namesTable <- read_csv(
 )
 
 
-subSetTable <- function(cdm, subjects, tablesToCharacterize, windows, targetCohort, overlap){
+subSetTable <- function(cdm, subjects, tablesToCharacterize, i, windows, targetCohort, overlap) {
 
-  characterizedTable <- NULL
-
-  for(i in 1:length(tablesToCharacterize$table_name)){
     table_name <- tablesToCharacterize$table_name[i]
 
     subjects <- getSubjects(cdm, targetCohort)
@@ -128,36 +125,13 @@ subSetTable <- function(cdm, subjects, tablesToCharacterize, windows, targetCoho
         "concept_id", "concept_name"
       ) %>%
       dplyr::distinct() %>%
-      dplyr::mutate(table_name = table_name)%>%
+      dplyr::mutate(table_name = table_name) %>%
       dplyr::compute()
 
-    characterizedTable[[i]] <- subsetedTable
-
-  }
-
-
-  # union all the tables into a temporal table
-  for (i in 1:length(characterizedTable)) {
-    if (i == 1) {
-      characterizedTables <- characterizedTable[[i]] %>%
-        dplyr::mutate(table_id = .env$i)
-    } else {
-      characterizedTables <- characterizedTables %>%
-        dplyr::union_all(
-          characterizedTable[[i]] %>%
-            dplyr::mutate(table_id = .env$i)
-        )
-    }
-  }
-  characterizedTables <- characterizedTables %>% dplyr::compute()
-  return(characterizedTables)
-
+  return(subsetedTable)
 }
 
-getCounts <- function(cdm, targetCohort, targetCohortId, characterizedTables)
-{
-
-
+getCounts <- function(cdm, targetCohort, targetCohortId, characterizedTables) {
   for (k in 1:length(targetCohortId)) {
     characterizedCohort <- targetCohort %>%
       dplyr::filter(.data$cohort_definition_id == !!targetCohortId[k]) %>%
@@ -205,8 +179,7 @@ calculateDenominators <- function(cdm,
                                     c(0, 0), c(1, 30), c(1, 90),
                                     c(31, 365), c(91, 365), c(366, Inf)
                                   )) {
-
-  subjects <- getSubjects(cdm,targetCohort)
+  subjects <- getSubjects(cdm, targetCohort)
 
   subjects_denominator <- subjects %>%
     dplyr::mutate(dif_start = dbplyr::sql(CDMConnector::datediff(
@@ -263,16 +236,13 @@ calculateDenominators <- function(cdm,
 
 
   return(denominatork)
-
 }
 
 
 
 
 
-addFlag <- function(cdm, subjects, table_name, overlap, windows)
-{
-
+addFlag <- function(cdm, subjects, table_name, overlap, windows) {
   subsetedTable <- cdm[[table_name]] %>%
     dplyr::inner_join(subjects, by = "person_id")
 
@@ -353,4 +323,19 @@ addFlag <- function(cdm, subjects, table_name, overlap, windows)
     dplyr::distinct() %>%
     dplyr::compute()
   return(subsetedTable)
-  }
+}
+
+
+
+
+
+
+getDescendantCounts <- function(x, cdm) {
+  x <- x %>%
+    dplyr::inner_join(cdm$concept_ancestor) %>%
+    dplyr::group_by(cohort_name, table_name, window_name, ancestor_concept_id) %>%
+    dplyr::summarise(concept_count = sum(concept_count)) %>%
+    dplyr::rename:ancestor_concept_id <- concept_id
+
+  return(x)
+}
