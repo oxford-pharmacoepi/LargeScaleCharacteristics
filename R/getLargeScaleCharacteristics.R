@@ -109,7 +109,7 @@ getLargeScaleCharacteristics <- function(cdm,
 
   for (i in 1:length(tablesToCharacterize$table_name)) {
 
-    subsetedTable[[i]] <- subSetTable(cdm, subjects, tablesToCharacterize, i,
+    subsetedTable[[i]] <- subSetTable(cdm, tablesToCharacterize, i,
                                       windows = temporalWindows, targetCohort, overlap)
     }
 

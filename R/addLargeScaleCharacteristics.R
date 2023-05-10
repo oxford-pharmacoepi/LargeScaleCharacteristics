@@ -193,9 +193,9 @@ addLargeScaleCharacteristics <- function(x,
     ) %>%
     dplyr::select(-c("window_id", "concept_name", "table_id")) %>%
     tidyr::pivot_wider(
-      names_from = c(table_name, concept_id, window_name),
+      names_from = c("table_name", "concept_id", "window_name"),
       names_glue = "{table_name}_{concept_id}_{window_name}",
-      values_from = flag
+      values_from = "flag"
     )
 
   result <- subjects %>%
@@ -206,7 +206,7 @@ addLargeScaleCharacteristics <- function(x,
     dplyr::select(-c("observation_period_start_date", "observation_period_end_date")) %>%
     dplyr::compute()
 
-  result <- result %>% replace(is.na(.), 0)
+  result <- result %>% replace(is.na(.data), 0)
 
   return(result)
 }

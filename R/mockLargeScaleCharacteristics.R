@@ -15,8 +15,6 @@
 # limitations under the License.
 
 #' It creates a mock database for testing LargeScaleCharacteristics package
-#'
-#'
 #' @param drug_exposure default null user can define its own table
 #' @param drug_strength default null user can define its own table
 #' @param observation_period default null user can define its own table
@@ -65,9 +63,8 @@
 #' @param cohort1 cohort table for test to run in getindication
 #' @param cohort2 cohort table for test to run in getindication
 #' @param ... user self defined tibble table to put in cdm, it can input as many as the user want
-#' @return
+#' @return the function returns a mock database with OMOP tables that users/developers can test the functions on
 #' @export
-#'
 #' @examples
 mockLargeScaleCharacteristics <- function(drug_exposure = NULL,
                                           drug_strength = NULL,

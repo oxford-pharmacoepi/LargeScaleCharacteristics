@@ -1,7 +1,3 @@
-library(readr)
-library(here)
-library(usethis)
-
 getSubjects <- function(cdm,
                         targetCohort,
                         all = TRUE) {
@@ -27,7 +23,7 @@ getSubjects <- function(cdm,
 }
 
 
-namesTable <- read_csv(
+namesTable <- readr::read_csv(
   here("extras", "namesTable.csv"),
   col_types = list(
     table_name = "c",
@@ -38,7 +34,7 @@ namesTable <- read_csv(
 )
 
 
-subSetTable <- function(cdm, subjects, tablesToCharacterize, i, windows, targetCohort, overlap) {
+subSetTable <- function(cdm, tablesToCharacterize, i, windows, targetCohort, overlap) {
 
     table_name <- tablesToCharacterize$table_name[i]
 
@@ -333,9 +329,9 @@ addFlag <- function(cdm, subjects, table_name, overlap, windows) {
 getDescendantCounts <- function(x, cdm) {
   x <- x %>%
     dplyr::inner_join(cdm$concept_ancestor) %>%
-    dplyr::group_by(cohort_name, table_name, window_name, ancestor_concept_id) %>%
-    dplyr::summarise(concept_count = sum(concept_count)) %>%
-    dplyr::rename:ancestor_concept_id <- concept_id
+    dplyr::group_by(.data$cohort_name, .data$table_name, .data$window_name, .data$ancestor_concept_id) %>%
+    dplyr::summarise(concept_count = sum(.data$concept_count)) %>%
+    dplyr::rename("ancestor_concept_id" = "concept_id")
 
   return(x)
 }

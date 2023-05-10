@@ -1,6 +1,4 @@
 
-
-
 #' @noRd
 checkCdm <- function(cdm, tables = NULL) {
   if (!isTRUE(inherits(cdm, "cdm_reference"))) {
@@ -24,7 +22,7 @@ checkCdm <- function(cdm, tables = NULL) {
 checkX <- function(x) {
   xCheck <- inherits(x, "tbl_dbi")
   if (!isTRUE(xCheck)) {
-    errorMessage$push(
+    cli::cli_abort(
       "- x is not a table"
     )
   }
@@ -37,29 +35,19 @@ checkX <- function(x) {
       "subject_id",
       "cohort_start_date",
       "cohort_end_date"
-    ) %in% colnames(x)),
-    add = errorMessage
-  )
+    ) %in% colnames(x))  )
   # check input cohort cannot have missing in the following columns
   checkmate::assertTRUE(
-    !checkmate::anyMissing(x %>% dplyr::pull("cohort_definition_id")),
-    add = errorMessage
-  )
+    !checkmate::anyMissing(x %>% dplyr::pull("cohort_definition_id")))
 
   checkmate::assertTRUE(
-    !checkmate::anyMissing(x %>% dplyr::pull("subject_id")),
-    add = errorMessage
-  )
+    !checkmate::anyMissing(x %>% dplyr::pull("subject_id")))
 
   checkmate::assertTRUE(
-    !checkmate::anyMissing(x %>% dplyr::pull("cohort_start_date")),
-    add = errorMessage
-  )
+    !checkmate::anyMissing(x %>% dplyr::pull("cohort_start_date")))
 
   checkmate::assertTRUE(
-    !checkmate::anyMissing(x %>% dplyr::pull("cohort_end_date")),
-    add = errorMessage
-  )
+    !checkmate::anyMissing(x %>% dplyr::pull("cohort_end_date")))
 
 
 }
@@ -144,7 +132,7 @@ getWindowNames <- function(window) {
 #' @noRd
 checkCohort <- function(cdm, targetCohortId, targetCohortName) {
   # check targetCohortName
-  checkmate::assertCharacter(targetCohortName, len = 1, add = errorMessage)
+  checkmate::assertCharacter(targetCohortName, len = 1)
 
   # check that targetCohortName point to a table that is a cohort
   checkmate::assertTRUE(
@@ -154,29 +142,24 @@ checkCohort <- function(cdm, targetCohortId, targetCohortName) {
       "cohort_start_date",
       "cohort_end_date"
     ) %in% colnames(cdm[[targetCohortName]])),
-    add = errorMessage
   )
 
 
   # check input cohort cannot have missing in the following columns
   checkmate::assertTRUE(
     !checkmate::anyMissing(cdm[[targetCohortName]] %>% dplyr::pull("cohort_definition_id")),
-    add = errorMessage
   )
 
   checkmate::assertTRUE(
     !checkmate::anyMissing(cdm[[targetCohortName]] %>% dplyr::pull("subject_id")),
-    add = errorMessage
   )
 
   checkmate::assertTRUE(
     !checkmate::anyMissing(cdm[[targetCohortName]] %>% dplyr::pull("cohort_start_date")),
-    add = errorMessage
   )
 
   checkmate::assertTRUE(
     !checkmate::anyMissing(cdm[[targetCohortName]] %>% dplyr::pull("cohort_end_date")),
-    add = errorMessage
   )
 
 
@@ -185,7 +168,6 @@ checkCohort <- function(cdm, targetCohortId, targetCohortName) {
     targetCohortId,
     lower = 1,
     null.ok = TRUE,
-    add = errorMessage
   )
 
   # filter the cohort and get the targetCohortId if not specified
