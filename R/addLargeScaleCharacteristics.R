@@ -125,7 +125,7 @@ addLargeScaleCharacteristics <- function(x,
   checkmate::assert_numeric(minimumFrequency, lower = 0, upper = 1)
 
   # overlap
-  overlap <- checkOverlap(overlap, tablesToCharacterize)
+  overlap <- checkLogical(overlap, tablesToCharacterize)
 
   # get the distinct subjects with their observation period
   subjects <- getSubjects(cdm, x)

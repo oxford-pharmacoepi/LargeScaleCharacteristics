@@ -8,4 +8,13 @@
 \description{
 This packages computes the large scale characterization of the OMOP Common Data Model at patient level or summarizing at cohort level.
 }
+\author{
+\strong{Maintainer}: Yuchen Guo \email{yuchen.guo@ndorms.ox.ac.uk} (\href{https://orcid.org/0000-0002-0847-4855}{ORCID})
+
+Authors:
+\itemize{
+  \item Marti Catala \email{marti.catalasabate@ndorms.ox.ac.uk} (\href{https://orcid.org/0000-0003-3308-9905}{ORCID})
+}
+
+}
 \keyword{internal}

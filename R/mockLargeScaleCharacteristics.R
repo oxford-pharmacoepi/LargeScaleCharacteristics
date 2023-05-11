@@ -66,6 +66,10 @@
 #' @return the function returns a mock database with OMOP tables that users/developers can test the functions on
 #' @export
 #' @examples
+#' \dontrun{
+#' library(DBI)
+#' library(LargeScaleCharacteristics)
+#' cdm <- mockLargeScaleCharacteristics()}
 mockLargeScaleCharacteristics <- function(drug_exposure = NULL,
                                           drug_strength = NULL,
                                           observation_period = NULL,

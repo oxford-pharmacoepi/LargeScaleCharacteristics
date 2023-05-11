@@ -206,13 +206,14 @@ checkTable <- function(cdm, tablesToCharacterize) {
   )
 }
 
-checkOverlap <- function(overlap, tablesToCharacterize){
+checkLogical <- function(overlap, tablesToCharacterize){
 
   checkmate::assertLogical(overlap, any.missing = FALSE)
 
   if (length(overlap) > 1) {
     if (length(overlap) != length(tablesToCharacterize)) {
-      stop("If length(overlap)>1 then length(overlap) = length(tablesToCharacterize)")
+      stop(paste("If length(", substitute(overlap), ")>1 then length(",
+                 substitute(overlap), ") == length(tablesToCharacterize)"))
     }
   } else {
     overlap <- rep(overlap, length(tablesToCharacterize))

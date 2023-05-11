@@ -12,6 +12,7 @@ getLargeScaleCharacteristics(
     -1), c(0, 0), c(1, 30), c(1, 90), c(31, 365), c(91, 365), c(366, Inf)),
   tablesToCharacterize = c("condition_occurrence", "drug_era", "procedure_occurrence",
     "measurement"),
+  includeDescendants = FALSE,
   overlap = TRUE
 )
 }
@@ -43,6 +44,9 @@ summarize. The available tables to characterize are: "visit_occurrence",
 "device_exposure", "measurement", "observation", "drug_era", "condition_era"
 and "specimen". By default: c("condition_occurrence", "drug_era",
 "procedure_occurrence", "measurement").}
+
+\item{includeDescendants}{A vector of whether to include descendant or not,
+for each tablesToCharacterize, default as all FALSE}
 
 \item{overlap}{Whether you want to consider overlapping events (overlap =
 TRUE) or only incident ones (overlap = FALSE).}

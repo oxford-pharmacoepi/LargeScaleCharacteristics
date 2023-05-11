@@ -39,6 +39,8 @@
 #' "device_exposure", "measurement", "observation", "drug_era", "condition_era"
 #' and "specimen". By default: c("condition_occurrence", "drug_era",
 #' "procedure_occurrence", "measurement").
+#' @param includeDescendants A vector of whether to include descendant or not,
+#' for each tablesToCharacterize, default as all FALSE
 #' @param overlap Whether you want to consider overlapping events (overlap =
 #' TRUE) or only incident ones (overlap = FALSE).
 #' @return The output of this function is a table containing summary characteristics.
@@ -71,6 +73,7 @@ getLargeScaleCharacteristics <- function(cdm,
                                            "condition_occurrence", "drug_era",
                                            "procedure_occurrence", "measurement"
                                          ),
+                                         includeDescendants = FALSE,
                                          overlap = TRUE) {
 
 
@@ -88,7 +91,7 @@ getLargeScaleCharacteristics <- function(cdm,
   #check tablesToCharacterize
   checkTable(cdm, tablesToCharacterize)
   # overlap
-  overlap <- checkOverlap(overlap, tablesToCharacterize)
+  overlap <- checkLogical(overlap, tablesToCharacterize)
   # get the distinct subjects with their observation period
   denominatork <- calculateDenominators(cdm,
                                         targetCohortName,
@@ -97,11 +100,13 @@ getLargeScaleCharacteristics <- function(cdm,
                                         temporalWindows)
 
 
+  includeDescendants <- checkLogical(includeDescendants, tablesToCharacterize)
 
   tablesToCharacterize <- tibble::tibble(
     table_id = seq(length(tablesToCharacterize)),
     table_name = tablesToCharacterize,
-    overlap = overlap
+    overlap = overlap,
+    includeDescendants = includeDescendants
   )
 
 
@@ -110,7 +115,7 @@ getLargeScaleCharacteristics <- function(cdm,
   for (i in 1:length(tablesToCharacterize$table_name)) {
 
     subsetedTable[[i]] <- subSetTable(cdm, tablesToCharacterize, i,
-                                      windows = temporalWindows, targetCohort, overlap)
+                                      temporalWindows, targetCohort)
     }
 
   # union all the tables into a temporal table
