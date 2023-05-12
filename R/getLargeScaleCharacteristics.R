@@ -41,6 +41,8 @@
 #' "procedure_occurrence", "measurement").
 #' @param includeDescendants A vector of whether to include descendant or not,
 #' for each tablesToCharacterize, default as all FALSE
+#' @param includeSources A vector of whether to include source id or not,
+#' for each tablesToCharacterize, default as all FALSE
 #' @param overlap Whether you want to consider overlapping events (overlap =
 #' TRUE) or only incident ones (overlap = FALSE).
 #' @return The output of this function is a table containing summary characteristics.
@@ -74,10 +76,8 @@ getLargeScaleCharacteristics <- function(cdm,
                                            "procedure_occurrence", "measurement"
                                          ),
                                          includeDescendants = FALSE,
+                                         includeSources = FALSE,
                                          overlap = TRUE) {
-
-
-
   parameters <- checkCohort(cdm, targetCohortId, targetCohortName)
 
   targetCohortId <- parameters$targetCohortId
@@ -88,49 +88,54 @@ getLargeScaleCharacteristics <- function(cdm,
 
   # write temporal windows tibble
   temporalWindows <- checkWindow(temporalWindows)
-  #check tablesToCharacterize
+  # check tablesToCharacterize
   checkTable(cdm, tablesToCharacterize)
   # overlap
   overlap <- checkLogical(overlap, tablesToCharacterize)
   # get the distinct subjects with their observation period
-  denominatork <- calculateDenominators(cdm,
-                                        targetCohortName,
-                                        targetCohortId,
-                                        targetCohort,
-                                        temporalWindows)
+  denominatork <- calculateDenominators(
+    cdm,
+    targetCohortName,
+    targetCohortId,
+    targetCohort,
+    temporalWindows
+  )
 
 
   includeDescendants <- checkLogical(includeDescendants, tablesToCharacterize)
+
+  includeSources <- checkLogical(includeSources, tablesToCharacterize)
 
   tablesToCharacterize <- tibble::tibble(
     table_id = seq(length(tablesToCharacterize)),
     table_name = tablesToCharacterize,
     overlap = overlap,
-    includeDescendants = includeDescendants
+    includeDescendants = includeDescendants,
+    includeSources = includeSources
   )
 
-
-  subsetedTable <- NULL
-
-  for (i in 1:length(tablesToCharacterize$table_name)) {
-
-    subsetedTable[[i]] <- subSetTable(cdm, tablesToCharacterize, i,
-                                      temporalWindows, targetCohort)
-    }
-
+  # get all tables for all tables to characterize
   # union all the tables into a temporal table
-  for (i in 1:length(subsetedTable)) {
+  subsetedTable <- NULL
+  for (i in 1:length(tablesToCharacterize$table_name)) {
+    subsetedTable[[i]] <- subSetTable(
+      cdm, tablesToCharacterize, i,
+      temporalWindows, targetCohort
+    )
     if (i == 1) {
       subsetedTables <- subsetedTable[[i]] %>%
-        dplyr::mutate(table_id = .env$i)%>% dplyr::compute()
+        dplyr::mutate(table_id = .env$i) %>%
+        dplyr::compute()
     } else {
       subsetedTables <- subsetedTables %>%
         dplyr::union_all(
           subsetedTable[[i]] %>%
             dplyr::mutate(table_id = .env$i)
-        )%>% dplyr::compute()
+        ) %>%
+        dplyr::compute()
     }
   }
+
 
   characterizedTables <- getCounts(cdm, targetCohort, targetCohortId, subsetedTables)
 
@@ -149,17 +154,17 @@ getLargeScaleCharacteristics <- function(cdm,
       "cohort_definition_id", "table_id", "table_name",
       "window_id", "window_name", "concept_id",
       "concept_name", "concept_count", "denominator_count",
-      "overlap"
-    ) %>%
-    dplyr::mutate(concept_type = "Standard")
+      "overlap", "concept_type", "includeDescendants", "includeSources"
+    )
 
 
   result <- result %>%
     dplyr::mutate(cdm_name = CDMConnector::cdmName(.env$cdm)) %>%
     dplyr::mutate(cohort_name = .env$targetCohortName) %>%
-    dplyr::select("cohort_definition_id", "cohort_name", "table_name", "window_name", "concept_id",
-                  "concept_name", "concept_count", "denominator_count",
-                  "overlap", "concept_type", "cdm_name"
+    dplyr::select(
+      "cohort_definition_id", "cohort_name", "table_name", "window_name", "concept_id",
+      "concept_name", "concept_count", "denominator_count",
+      "overlap", "concept_type", "includeDescendants", "includeSources", "cdm_name"
     )
 
   return(result)

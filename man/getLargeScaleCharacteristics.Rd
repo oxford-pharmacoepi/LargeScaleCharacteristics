@@ -13,6 +13,7 @@ getLargeScaleCharacteristics(
   tablesToCharacterize = c("condition_occurrence", "drug_era", "procedure_occurrence",
     "measurement"),
   includeDescendants = FALSE,
+  includeSources = FALSE,
   overlap = TRUE
 )
 }
@@ -46,6 +47,9 @@ and "specimen". By default: c("condition_occurrence", "drug_era",
 "procedure_occurrence", "measurement").}
 
 \item{includeDescendants}{A vector of whether to include descendant or not,
+for each tablesToCharacterize, default as all FALSE}
+
+\item{includeSources}{A vector of whether to include source id or not,
 for each tablesToCharacterize, default as all FALSE}
 
 \item{overlap}{Whether you want to consider overlapping events (overlap =

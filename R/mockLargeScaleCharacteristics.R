@@ -404,7 +404,7 @@ mockLargeScaleCharacteristics <- function(drug_exposure = NULL,
       min_days_to_observation_end <- 5000
     }
     if (is.null(max_days_to_observation_end)) {
-      max_days_to_observation_end <- 50000
+      max_days_to_observation_end <- 5000
     }
 
     obs_end_date <-

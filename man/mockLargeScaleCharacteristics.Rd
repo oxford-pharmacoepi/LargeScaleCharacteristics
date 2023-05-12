@@ -158,3 +158,9 @@ the function returns a mock database with OMOP tables that users/developers can 
 \description{
 It creates a mock database for testing LargeScaleCharacteristics package
 }
+\examples{
+\dontrun{
+library(DBI)
+library(LargeScaleCharacteristics)
+cdm <- mockLargeScaleCharacteristics()}
+}

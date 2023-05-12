@@ -23,119 +23,127 @@ getSubjects <- function(cdm,
 }
 
 
-namesTable <- readr::read_csv(
-  here("extras", "namesTable.csv"),
-  col_types = list(
-    table_name = "c",
-    start_date_name = "c",
-    end_date_name = "c",
-    concept_id_name = "c"
-  )
-)
 
 
 subSetTable <- function(cdm, tablesToCharacterize, i, windows, targetCohort) {
+  table_name <- tablesToCharacterize$table_name[i]
 
-    table_name <- tablesToCharacterize$table_name[i]
+  subjects <- getSubjects(cdm, targetCohort)
 
-    subjects <- getSubjects(cdm, targetCohort)
-
+  if (table_name == "condition_occurrence") {
+    subsetedTable <- cdm[[table_name]] %>%
+      dplyr::mutate(condition_end_date = dplyr::if_else(is.na(.data$condition_end_date),
+        .data$condition_start_date,
+        .data$condition_end_date
+      )) %>%
+      dplyr::inner_join(subjects, by = "person_id")
+  } else {
     subsetedTable <- cdm[[table_name]] %>%
       dplyr::inner_join(subjects, by = "person_id")
+  }
 
-    overlap.k <- tablesToCharacterize[tablesToCharacterize$table_name == table_name,]$overlap
+  overlap.k <- tablesToCharacterize[tablesToCharacterize$table_name == table_name, ]$overlap
 
-    includeDescendants.k <- tablesToCharacterize[tablesToCharacterize$table_name == table_name,]$includeDescendants
+  includeDescendants.k <- tablesToCharacterize[tablesToCharacterize$table_name == table_name, ]$includeDescendants
 
-    start_date <- namesTable$start_date_name[namesTable$table_name == table_name]
-    # get end date depending on the table
-    end_date <- namesTable$end_date_name[namesTable$table_name == table_name]
-    # get concept id depending on the table
-    concept_id <- namesTable$concept_id_name[namesTable$table_name == table_name]
+  includeSources.k <- tablesToCharacterize[tablesToCharacterize$table_name == table_name, ]$includeSources
 
+  start_date <- namesTable$start_date_name[namesTable$table_name == table_name]
+  # get end date depending on the table
+  end_date <- namesTable$end_date_name[namesTable$table_name == table_name]
+  # get concept id depending on the table
+  concept_id <- namesTable$concept_id_name[namesTable$table_name == table_name]
+  # get source_concept_id_name
+  source_concept_id <- namesTable$source_concept_id_name[namesTable$table_name == table_name]
+
+  subsetedTable <- subsetedTable %>%
+    # rename start date
+    dplyr::rename("start_date" = .env$start_date)
+
+  # rename or create end date
+  if (is.na(end_date) || isFALSE(overlap.k)) {
     subsetedTable <- subsetedTable %>%
-      # rename start date
-      dplyr::rename("start_date" = .env$start_date)
-
-    # rename or create end date
-    if (is.na(end_date) || isFALSE(overlap.k)) {
-      subsetedTable <- subsetedTable %>%
-        dplyr::mutate(end_date = .data$start_date)
-    } else {
-      subsetedTable <- subsetedTable %>%
-        dplyr::rename("end_date" = .env$end_date)
-    }
+      dplyr::mutate(end_date = .data$start_date)
+  } else {
     subsetedTable <- subsetedTable %>%
-      # rename concept id and get concept name
-      dplyr::rename("concept_id" = .env$concept_id) %>%
-      dplyr::left_join(
-        cdm$concept %>%
-          dplyr::select("concept_id", "concept_name"),
-        by = "concept_id"
-      ) %>%
-      # obtain observations inside the observation period only
-      dplyr::filter(.data$start_date <= .data$observation_period_end_date) %>%
-      dplyr::filter(.data$end_date >= .data$observation_period_start_date) %>%
-      # obtain the time difference between the start of the event and the
-      # cohort start date
-      dplyr::mutate(days_difference_start = dbplyr::sql(CDMConnector::datediff(
+      dplyr::rename("end_date" = .env$end_date)
+  }
+  subsetedTable <- subsetedTable %>%
+    # rename concept id and get concept name
+    dplyr::rename("concept_id" = .env$concept_id) %>%
+    dplyr::left_join(
+      cdm$concept %>%
+        dplyr::select("concept_id", "concept_name"),
+      by = "concept_id"
+    ) %>%
+    # obtain observations inside the observation period only
+    dplyr::filter(.data$start_date <= .data$observation_period_end_date) %>%
+    dplyr::filter(.data$end_date >= .data$observation_period_start_date) %>%
+    # obtain the time difference between the start of the event and the
+    # cohort start date
+    dplyr::mutate(days_difference_start = dbplyr::sql(CDMConnector::datediff(
+      start = "cohort_start_date",
+      end = "start_date"
+    )))
+
+  # obtain the time difference between the end of the event and the cohort
+  # start date
+  if (is.na(end_date) || isFALSE(overlap.k)) {
+    subsetedTable <- subsetedTable %>%
+      dplyr::mutate(days_difference_end = .data$days_difference_start)
+  } else {
+    subsetedTable <- subsetedTable %>%
+      dplyr::mutate(days_difference_end = dbplyr::sql(CDMConnector::datediff(
         start = "cohort_start_date",
-        end = "start_date"
+        end = "end_date"
       )))
+  }
 
-    # obtain the time difference between the end of the event and the cohort
-    # start date
-    if (is.na(end_date) || isFALSE(overlap.k)) {
-      subsetedTable <- subsetedTable %>%
-        dplyr::mutate(days_difference_end = .data$days_difference_start)
-    } else {
-      subsetedTable <- subsetedTable %>%
-        dplyr::mutate(days_difference_end = dbplyr::sql(CDMConnector::datediff(
-          start = "cohort_start_date",
-          end = "end_date"
-        )))
-    }
+  subsetedTable <- subsetedTable %>%
+    # merge the table that we want to characterize with all the temporal
+    # windows
+    dplyr::mutate(to_merge = 1) %>%
+    dplyr::inner_join(
+      windows %>%
+        dplyr::mutate(to_merge = 1),
+      by = "to_merge",
+      copy = TRUE
+    ) %>%
+    # get only the events that start before the end of the window
+    dplyr::filter(
+      is.infinite(.data$upper) |
+        .data$days_difference_start <= .data$upper
+    ) %>%
+    # get only events that end/start (depending if overlap = TRUE/FALSE) after
+    # the start of the window
+    dplyr::filter(
+      is.infinite(.data$lower) |
+        .data$days_difference_end >= .data$lower
+    ) %>%
+    # get only distinct events per window id
+    dplyr::select(
+      "person_id", "cohort_start_date", "cohort_end_date", "window_id",
+      "concept_id", "concept_name"
+    ) %>%
+    dplyr::distinct() %>%
+    dplyr::mutate(table_name = table_name) %>%
+    dplyr::mutate(concept_type = "Standard") %>%
+    dplyr::compute()
 
-    subsetedTable <- subsetedTable %>%
-      # merge the table that we want to characterize with all the temporal
-      # windows
-      dplyr::mutate(to_merge = 1) %>%
-      dplyr::inner_join(
-        windows %>%
-          dplyr::mutate(to_merge = 1),
-        by = "to_merge",
-        copy = TRUE
-      ) %>%
-      # get only the events that start before the end of the window
-      dplyr::filter(
-        is.infinite(.data$upper) |
-          .data$days_difference_start <= .data$upper
-      ) %>%
-      # get only events that end/start (depending if overlap = TRUE/FALSE) after
-      # the start of the window
-      dplyr::filter(
-        is.infinite(.data$lower) |
-          .data$days_difference_end >= .data$lower
-      ) %>%
-      # get only distinct events per window id
-      dplyr::select(
-        "person_id", "cohort_start_date", "cohort_end_date", "window_id",
-        "concept_id", "concept_name"
-      ) %>%
-      dplyr::distinct() %>%
-      dplyr::mutate(table_name = table_name) %>%
-      dplyr::compute()
+  if (isTRUE(includeDescendants.k)) {
+    subsetedTableDes <- addDescendants(subsetedTable, cdm$concept_ancestor)
+    subsetedTable <- subsetedTableDes %>% dplyr::union_all(subsetedTable)
+  }
 
-    if(isTRUE(includeDescendants.k))
-    {
-      subsetedTable <- addDescendants(subsetedTable, cdm$concept_ancestor)
-    }
+  if (isTRUE(includeSources.k)) {
+    subsetedTableSrc <- addSource(cdm, subsetedTable, table_name, concept_id, source_concept_id)
+    subsetedTable <- subsetedTableSrc %>% dplyr::union_all(subsetedTable)
+  }
+
   return(subsetedTable)
 }
 
 getCounts <- function(cdm, targetCohort, targetCohortId, characterizedTables) {
-
-
   for (k in 1:length(targetCohortId)) {
     characterizedCohort <- targetCohort %>%
       dplyr::filter(.data$cohort_definition_id == !!targetCohortId[k]) %>%
@@ -149,7 +157,10 @@ getCounts <- function(cdm, targetCohort, targetCohortId, characterizedTables) {
 
 
     characterizedCohort <- characterizedCohort %>%
-      dplyr::group_by(.data$concept_id, .data$concept_name, .data$window_id, .data$table_id, .data$table_name) %>%
+      dplyr::group_by(
+        .data$concept_id, .data$concept_name, .data$window_id,
+        .data$table_id, .data$table_name, .data$concept_type
+      ) %>%
       dplyr::tally() %>%
       dplyr::ungroup() %>%
       dplyr::rename("concept_count" = "n") %>%
@@ -163,13 +174,11 @@ getCounts <- function(cdm, targetCohort, targetCohortId, characterizedTables) {
     }
   }
 
-
-
   characterizedTables <- characterizedCohortk %>%
     dplyr::relocate("cohort_definition_id", .before = "concept_id") %>%
     dplyr::select(
       "cohort_definition_id", "table_id", "window_id", "concept_id",
-      "concept_name", "concept_count", "table_name"
+      "concept_name", "concept_count", "table_name", "concept_type"
     )
 
   return(characterizedTables)
@@ -205,10 +214,10 @@ calculateDenominators <- function(cdm,
       copy = TRUE
     ) %>%
     dplyr::filter(
-      is.na(.data$upper) | .data$dif_start <= .data$upper
+      is.infinite(.data$upper) | .data$dif_start <= .data$upper
     ) %>%
     dplyr::filter(
-      is.na(.data$lower) | .data$dif_end >= .data$lower
+      is.infinite(.data$lower) | .data$dif_end >= .data$lower
     ) %>%
     dplyr::select(
       "person_id", "cohort_start_date", "cohort_end_date", "window_id"
@@ -250,8 +259,17 @@ calculateDenominators <- function(cdm,
 
 
 addFlag <- function(cdm, subjects, table_name, overlap, windows) {
-  subsetedTable <- cdm[[table_name]] %>%
-    dplyr::inner_join(subjects, by = "person_id")
+  if (table_name == "condition_occurrence") {
+    subsetedTable <- cdm[[table_name]] %>%
+      dplyr::mutate(condition_end_date = dplyr::if_else(is.na(.data$condition_end_date),
+        .data$condition_start_date,
+        .data$condition_end_date
+      )) %>%
+      dplyr::inner_join(subjects, by = "person_id")
+  } else {
+    subsetedTable <- cdm[[table_name]] %>%
+      dplyr::inner_join(subjects, by = "person_id")
+  }
 
 
   start_date <- namesTable$start_date_name[namesTable$table_name == table_name]
@@ -314,12 +332,12 @@ addFlag <- function(cdm, subjects, table_name, overlap, windows) {
       copy = TRUE
     ) %>%
     # get only the events that start before the end of the window
-    dplyr::mutate(flag = dplyr::if_else(.data$flag != 0 & (is.na(
+    dplyr::mutate(flag = dplyr::if_else(.data$flag != 0 & (is.infinite(
       .data$upper
     ) | .data$days_difference_start <= .data$upper), 1, 0)) %>%
     # get only events that end/start (depending if overlap = TRUE/FALSE) after
     # the start of the window
-    dplyr::mutate(flag = dplyr::if_else(.data$flag != 0 & (is.na(
+    dplyr::mutate(flag = dplyr::if_else(.data$flag != 0 & (is.infinite(
       .data$lower
     ) | .data$days_difference_end >= .data$lower), .data$flag, 0)) %>%
     # get only distinct events per window id
@@ -345,25 +363,56 @@ addDescendants <- function(workingCandidateCodes,
       by = "ancestor_concept_id"
     ) %>%
     dplyr::select("descendant_concept_id",
-                  "concept_id" = "ancestor_concept_id") %>%
+      "concept_id" = "ancestor_concept_id"
+    ) %>%
     dplyr::distinct() %>%
     dplyr::left_join(workingCandidateCodes, by = "concept_id") %>%
     dplyr::select(-"concept_id") %>%
-    dplyr::rename("concept_id" = "descendant_concept_id")
+    dplyr::rename("concept_id" = "descendant_concept_id") %>%
+    dplyr::mutate(concept_type = "Descendants")
 
   return(candidateCodeDescendants)
 }
 
 
-# getDescendantCounts <- function(x, cdm) {
-#   x <- x %>%
-#     dplyr::inner_join(cdm$concept_ancestor,
-#                       by = c("concept_id" = "ancestor_concept_id"),
-#                       copy = TRUE) %>%
-#     dplyr::group_by(.data$ancestor_concept_id, .data$concept_name,
-#                     .data$window_id, .data$table_id, .data$table_name) %>%
-#     dplyr::summarise(concept_count = sum(.data$concept_count)) %>%
-#     dplyr::rename("ancestor_concept_id" = "concept_id") %>% dplyr::ungroup()
-#
-#   return(x)
-# }
+addSource <- function(cdm,
+                      workingCandidateCodes,
+                      table_name,
+                      concept_id,
+                      source_concept_id) {
+  candidateCodeSource <- workingCandidateCodes %>%
+    dplyr::filter(.data$concept_type == "Standard") %>%
+    dplyr::select(!!concept_id := "concept_id") %>%
+    dplyr::distinct() %>%
+    dplyr::left_join(
+      cdm[[table_name]],
+      by = concept_id
+    ) %>%
+    dplyr::select(
+      .env$source_concept_id,
+      .env$concept_id
+    ) %>%
+    dplyr::distinct() %>%
+    dplyr::left_join(workingCandidateCodes %>% dplyr::rename(!!concept_id := "concept_id"), by = concept_id) %>%
+    dplyr::select(-.env$concept_id) %>%
+    dplyr::rename("concept_id" = .env$source_concept_id) %>%
+    dplyr::mutate(concept_type = "Source")
+
+  return(candidateCodeSource)
+}
+
+
+
+
+computeSmd <- function(x) {
+  x <- x %>%
+    dplyr::select("target_percentage", "comparator_percentage") %>%
+    dplyr::mutate(
+      p1 = .data$target_percentage,
+      p2 = .data$comparator_percentage
+    ) %>%
+    dplyr::mutate(
+      smd = (.data$p1 - .data$p2) / sqrt((.data$p1 * (1 - .data$p1) + .data$p2 * (1 - .data$p2)) / 2)
+    )
+  return(x)
+}
