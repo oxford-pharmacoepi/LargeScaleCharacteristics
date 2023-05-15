@@ -45,6 +45,7 @@
 #' for each tablesToCharacterize, default as all FALSE
 #' @param overlap Whether you want to consider overlapping events (overlap =
 #' TRUE) or only incident ones (overlap = FALSE).
+#' @param smd Whether you want to compute SMD, default set to false
 #' @return The output of this function is a table containing summary characteristics.
 #' Key information like temporalWindows considered will be output in columns
 #' window_id and window_name. tablesToChacaterize will be output in columns
@@ -77,7 +78,8 @@ getLargeScaleCharacteristics <- function(cdm,
                                          ),
                                          includeDescendants = FALSE,
                                          includeSources = FALSE,
-                                         overlap = TRUE) {
+                                         overlap = TRUE,
+                                         smd = FALSE) {
   parameters <- checkCohort(cdm, targetCohortId, targetCohortName)
 
   targetCohortId <- parameters$targetCohortId
@@ -166,6 +168,10 @@ getLargeScaleCharacteristics <- function(cdm,
       "concept_name", "concept_count", "denominator_count",
       "overlap", "concept_type", "includeDescendants", "includeSources", "cdm_name"
     )
+
+  if (isTRUE(smd)) {
+    result <- computeSmd(result)
+    }
 
   return(result)
 }

@@ -404,15 +404,55 @@ addSource <- function(cdm,
 
 
 
-computeSmd <- function(x) {
-  x <- x %>%
-    dplyr::select("target_percentage", "comparator_percentage") %>%
-    dplyr::mutate(
-      p1 = .data$target_percentage,
-      p2 = .data$comparator_percentage
-    ) %>%
-    dplyr::mutate(
-      smd = (.data$p1 - .data$p2) / sqrt((.data$p1 * (1 - .data$p1) + .data$p2 * (1 - .data$p2)) / 2)
+computeSmd <- function(result) {
+  result_i <- NULL
+  for (i in 1:length(result$cohort_definition_id)) {
+    result_j <- NULL
+    if (length(result$cohort_definition_id) - i > 0) {
+      for (j in 1:(length(result$cohort_definition_id) - i)) {
+        result_to_add <- result %>%
+          dplyr::filter(.data$cohort_definition_id == i) %>%
+          dplyr::mutate(p1 = .data$concept_count / .data$denominator_count) %>%
+          dplyr::select("cohort_definition_id1" = "cohort_definition_id", "table_name", "window_name", "concept_id", "p1") %>%
+          dplyr::left_join(
+            result %>%
+              dplyr::filter(.data$cohort_definition_id == i + j) %>%
+              dplyr::mutate(p2 = .data$concept_count / .data$denominator_count) %>%
+              dplyr::select("cohort_definition_id2" = "cohort_definition_id", "table_name", "window_name", "concept_id", "p2"),
+            by = c("table_name", "window_name", "concept_id")
+          )
+        if(nrow(result_to_add) > 0){
+
+        result_j[[j]] <- result_to_add %>%
+          dplyr::filter(!is.na(.data$cohort_definition_id2) & !is.na(.data$p2)) %>%
+          dplyr::mutate(smd = dplyr::if_else(.data$p1 * (1 - .data$p1) + .data$p2 * (1 - .data$p2)==0,
+                                       0,
+                                       (.data$p1 - .data$p2) / sqrt((.data$p1 * (1 - .data$p1) +
+                                                                       .data$p2 * (1 - .data$p2)) / 2))
+          )}
+      }
+    }
+
+    result_i[[i]] <- result_j %>% dplyr::bind_rows()
+  }
+
+  result <- result %>%
+    dplyr::left_join(
+      result_i %>% dplyr::bind_rows() %>%
+        dplyr::rename("cohort_definition_id_comparator" = "cohort_definition_id2",
+                      "cohort_definition_id" = "cohort_definition_id1") %>%
+        dplyr::union_all(result_i %>% dplyr::bind_rows() %>%
+                             dplyr::rename("cohort_definition_id_comparator" = "cohort_definition_id1",
+                                           "cohort_definition_id" = "cohort_definition_id2") %>%
+                           dplyr::mutate(smd = -.data$smd)) %>%
+        dplyr::select(
+          "cohort_definition_id", "cohort_definition_id_comparator",
+          "table_name", "window_name", "concept_id", "smd"
+        ),
+      by = c(
+        "cohort_definition_id", "table_name",
+        "window_name", "concept_id"
+      )
     )
-  return(x)
+  return(result)
 }

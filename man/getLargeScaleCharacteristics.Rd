@@ -14,7 +14,8 @@ getLargeScaleCharacteristics(
     "measurement"),
   includeDescendants = FALSE,
   includeSources = FALSE,
-  overlap = TRUE
+  overlap = TRUE,
+  smd = FALSE
 )
 }
 \arguments{
@@ -54,6 +55,8 @@ for each tablesToCharacterize, default as all FALSE}
 
 \item{overlap}{Whether you want to consider overlapping events (overlap =
 TRUE) or only incident ones (overlap = FALSE).}
+
+\item{smd}{Whether you want to compute SMD, default set to false}
 }
 \value{
 The output of this function is a table containing summary characteristics.

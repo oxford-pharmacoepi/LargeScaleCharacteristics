@@ -463,7 +463,6 @@ test_that("check descandants count", {
       as.Date("2011-03-01"),
       as.Date("2011-04-01"),
       as.Date("2011-05-01")
-
     )
   )
   cohort2 <- tibble::tibble(
@@ -479,16 +478,20 @@ test_that("check descandants count", {
 
   drug_exposure <- tibble::tibble(
     person_id = c("1", "2"),
-    drug_exposure_start_date = c(as.Date("2008-01-03"),as.Date("2007-10-03")),
+    drug_exposure_start_date = c(as.Date("2008-01-03"), as.Date("2007-10-03")),
     drug_exposure_end_date = c(as.Date("2010-03-03"), as.Date("2010-03-03")),
     drug_concept_id = c("3", "3")
   )
 
   concept_ancestor <- tibble::tibble(
-    ancestor_concept_id = c("3", "3", "3", "3",
-                            "6", "6", "6", "6"),
-    descendant_concept_id = c("33", "333", "3333", "33333",
-                              "66", "666", "6666", "66666")
+    ancestor_concept_id = c(
+      "3", "3", "3", "3",
+      "6", "6", "6", "6"
+    ),
+    descendant_concept_id = c(
+      "33", "333", "3333", "33333",
+      "66", "666", "6666", "66666"
+    )
   )
 
   condition_occurrence <- tibble::tibble(
@@ -508,18 +511,20 @@ test_that("check descandants count", {
   )
 
   result_des <- getLargeScaleCharacteristics(cdm,
-                               targetCohortName = c("cohort1"),
-                               temporalWindows = list(c(-Inf, -365)),
-                               tablesToCharacterize = c("drug_exposure", "condition_occurrence"),
-                               includeDescendants = TRUE,
-                               overlap = FALSE)
+    targetCohortName = c("cohort1"),
+    temporalWindows = list(c(-Inf, -365)),
+    tablesToCharacterize = c("drug_exposure", "condition_occurrence"),
+    includeDescendants = TRUE,
+    overlap = FALSE
+  )
 
   result_no_des <- getLargeScaleCharacteristics(cdm,
-                                                targetCohortName = c("cohort1"),
-                                                temporalWindows = list(c(-Inf, -365)),
-                                                tablesToCharacterize = c("drug_exposure", "condition_occurrence"),
-                                                includeDescendants = FALSE,
-                                                overlap = TRUE)
+    targetCohortName = c("cohort1"),
+    temporalWindows = list(c(-Inf, -365)),
+    tablesToCharacterize = c("drug_exposure", "condition_occurrence"),
+    includeDescendants = FALSE,
+    overlap = TRUE
+  )
 
   expect_true(all(result_des$concept_count %in% unique(result_no_des$concept_count)))
 })
@@ -543,23 +548,26 @@ test_that("check source count", {
       as.Date("2011-03-01"),
       as.Date("2011-04-01"),
       as.Date("2011-05-01")
-
     )
   )
 
   drug_exposure <- tibble::tibble(
     person_id = c("1", "1"),
-    drug_exposure_start_date = c(as.Date("2010-01-03"),as.Date("2011-01-03")),
+    drug_exposure_start_date = c(as.Date("2010-01-03"), as.Date("2011-01-03")),
     drug_exposure_end_date = c(as.Date("2010-03-03"), as.Date("2011-03-03")),
     drug_concept_id = c("3", "3"),
-    drug_source_concept_id = c("123","123")
+    drug_source_concept_id = c("123", "123")
   )
 
   concept_ancestor <- tibble::tibble(
-    ancestor_concept_id = c("3", "3", "3", "3",
-                            "6", "6", "6", "6"),
-    descendant_concept_id = c("33", "333", "3333", "33333",
-                              "66", "666", "6666", "66666")
+    ancestor_concept_id = c(
+      "3", "3", "3", "3",
+      "6", "6", "6", "6"
+    ),
+    descendant_concept_id = c(
+      "33", "333", "3333", "33333",
+      "66", "666", "6666", "66666"
+    )
   )
 
   condition_occurrence <- tibble::tibble(
@@ -567,7 +575,8 @@ test_that("check source count", {
     condition_concept_id = c("6", "6"),
     condition_start_date = c(as.Date("2008-05-06"), as.Date("2008-05-06")),
     condition_end_date = c(as.Date("2009-05-31"), as.Date("2009-05-31")),
-    condition_source_concept_id = c("123456", "123456"))
+    condition_source_concept_id = c("123456", "123456")
+  )
 
 
   cdm <- mockLargeScaleCharacteristics(
@@ -579,18 +588,20 @@ test_that("check source count", {
   )
 
   result_src <- getLargeScaleCharacteristics(cdm,
-                                             targetCohortName = c("cohort1"),
-                                             temporalWindows = list(c(-Inf, -365)),
-                                             tablesToCharacterize = c("drug_exposure", "condition_occurrence"),
-                                             includeSources = TRUE,
-                                             overlap = FALSE)
+    targetCohortName = c("cohort1"),
+    temporalWindows = list(c(-Inf, -365)),
+    tablesToCharacterize = c("drug_exposure", "condition_occurrence"),
+    includeSources = TRUE,
+    overlap = FALSE
+  )
 
   result_no_src <- getLargeScaleCharacteristics(cdm,
-                                                targetCohortName = c("cohort1"),
-                                                temporalWindows = list(c(-Inf, -365)),
-                                                tablesToCharacterize = c("drug_exposure", "condition_occurrence"),
-                                                includeSources = FALSE,
-                                                overlap = TRUE)
+    targetCohortName = c("cohort1"),
+    temporalWindows = list(c(-Inf, -365)),
+    tablesToCharacterize = c("drug_exposure", "condition_occurrence"),
+    includeSources = FALSE,
+    overlap = TRUE
+  )
 
   expect_true(all(result_src$concept_count %in% unique(result_no_src$concept_count)))
 })
@@ -601,7 +612,7 @@ test_that("check source count", {
 
 test_that("check missing condition end date", {
   cohort1 <- tibble::tibble(
-    cohort_definition_id = c("1", "1", "1", "2"),
+    cohort_definition_id = c("1", "1", "2", "2"),
     subject_id = c("1", "1", "1", "2"),
     cohort_start_date = c(
       as.Date("2010-03-03"),
@@ -614,7 +625,6 @@ test_that("check missing condition end date", {
       as.Date("2011-03-01"),
       as.Date("2011-04-01"),
       as.Date("2011-05-01")
-
     )
   )
 
@@ -623,7 +633,8 @@ test_that("check missing condition end date", {
     condition_concept_id = c("6", "6"),
     condition_start_date = c(as.Date("2008-05-06"), as.Date("2008-05-06")),
     condition_end_date = c(as.Date(NA), as.Date(NA)),
-    condition_source_concept_id = c("123456", "123456"))
+    condition_source_concept_id = c("123456", "123456")
+  )
 
 
   cdm <- mockLargeScaleCharacteristics(
@@ -633,10 +644,71 @@ test_that("check missing condition end date", {
   )
 
   res_overlap <- getLargeScaleCharacteristics(cdm,
-                               targetCohortName = c("cohort1"),
-                               tablesToCharacterize = c("drug_exposure", "condition_occurrence"),
-                               includeSources = FALSE,
-                               overlap = TRUE)
+    targetCohortName = c("cohort1"),
+    tablesToCharacterize = c("drug_exposure", "condition_occurrence"),
+    includeSources = FALSE,
+    overlap = TRUE
+  )
+
+  getLargeScaleCharacteristics(cdm,
+    targetCohortName = c("cohort1"),
+    temporalWindows = list(c(-30, -1), c(-365, -30)),
+    includeSources = FALSE,
+    overlap = TRUE
+  )
 
   expect_true(nrow(res_overlap) != 0)
+})
+
+
+
+
+
+
+test_that("check smd works", {
+  cohort1 <- tibble::tibble(
+    cohort_definition_id = c("1", "1", "2", "2","2"),
+    subject_id = c("1", "1", "1", "2", "2"),
+    cohort_start_date = c(
+      as.Date("2011-03-03"),
+      as.Date("2008-01-03"),
+      as.Date("2010-03-03"),
+      as.Date("2008-01-03"),
+      as.Date("2008-01-03")
+    ),
+    cohort_end_date = c(
+      as.Date("2012-01-01"),
+      as.Date("2011-03-01"),
+      as.Date("2012-01-01"),
+      as.Date("2011-03-01"),
+      as.Date("2011-03-01")
+    )
+  )
+
+  condition_occurrence <- tibble::tibble(
+    person_id = c("1", "2"),
+    condition_concept_id = c("6", "6"),
+    condition_start_date = c(as.Date("2009-05-06"), as.Date("2011-05-06")),
+    condition_end_date = c(as.Date(NA), as.Date(NA)),
+    condition_source_concept_id = c("123456", "123456")
+  )
+
+
+  cdm <- mockLargeScaleCharacteristics(
+    cohort1 = cohort1,
+    condition_occurrence = condition_occurrence,
+    concept_id_size = 6
+  )
+
+  res_smd <- getLargeScaleCharacteristics(cdm,
+    targetCohortName = c("cohort1"),
+    tablesToCharacterize = c("drug_exposure", "condition_occurrence"),
+    smd = TRUE,
+    overlap = FALSE
+  )
+
+  expect_true(all(res_smd$smd[!is.na(res_smd$smd)] %in%
+                    c((2/3 - 1/2)/sqrt((2/3*1/3 +1/2*1/2)/2),
+                      -(2/3 - 1/2)/sqrt((2/3*1/3 +1/2*1/2)/2))))
+
 })
