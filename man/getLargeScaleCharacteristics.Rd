@@ -8,11 +8,14 @@ getLargeScaleCharacteristics(
   cdm,
   targetCohortName,
   targetCohortId = NULL,
-  temporalWindows = list(c(NA, -366), c(-365, -91), c(-365, -31), c(-90, -1), c(-30,
-    -1), c(0, 0), c(1, 30), c(1, 90), c(31, 365), c(91, 365), c(366, NA)),
+  temporalWindows = list(c(-Inf, -366), c(-365, -91), c(-365, -31), c(-90, -1), c(-30,
+    -1), c(0, 0), c(1, 30), c(1, 90), c(31, 365), c(91, 365), c(366, Inf)),
   tablesToCharacterize = c("condition_occurrence", "drug_era", "procedure_occurrence",
     "measurement"),
-  overlap = TRUE
+  includeDescendants = FALSE,
+  includeSources = FALSE,
+  overlap = TRUE,
+  smd = FALSE
 )
 }
 \arguments{
@@ -33,9 +36,9 @@ be a list of numeric vectors of length two. The tables will be characterized
 between the first element and the second element respect to the
 cohort_start_date of each individual. To refer to any time prior set NA the
 first element of the vector. To refer to any time after the index date set NA
-the second element of the vector. By default: list(c(NA, -366), c(-365, -90),
+the second element of the vector. By default: list(c(-Inf, -366), c(-365, -90),
 c(-365, -31), c(-90, -1), c(-30, -1), c(0, 0), c(1, 30), c(1, 90),
-c(31, 365), c(91, 365), c(366, NA)).}
+c(31, 365), c(91, 365), c(366, Inf)).}
 
 \item{tablesToCharacterize}{Name of the tables in the cdm that we want to
 summarize. The available tables to characterize are: "visit_occurrence",
@@ -44,8 +47,16 @@ summarize. The available tables to characterize are: "visit_occurrence",
 and "specimen". By default: c("condition_occurrence", "drug_era",
 "procedure_occurrence", "measurement").}
 
+\item{includeDescendants}{A vector of whether to include descendant or not,
+for each tablesToCharacterize, default as all FALSE}
+
+\item{includeSources}{A vector of whether to include source id or not,
+for each tablesToCharacterize, default as all FALSE}
+
 \item{overlap}{Whether you want to consider overlapping events (overlap =
 TRUE) or only incident ones (overlap = FALSE).}
+
+\item{smd}{Whether you want to compute SMD, default set to false}
 }
 \value{
 The output of this function is a table containing summary characteristics.

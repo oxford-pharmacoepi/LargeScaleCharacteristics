@@ -2,13 +2,12 @@ Package: LargeScaleCharacteristics
 Type: Package
 Title: Large scale characterization using the OMOP Common Data Model
 Version: 0.1.0
-Author: c(
+Authors@R: c(
     person("Yuchen", "Guo", email = "yuchen.guo@ndorms.ox.ac.uk", 
         role = c("aut", "cre"), comment = c(ORCID = "0000-0002-0847-4855")), 
     person("Marti", "Catala", email = "marti.catalasabate@ndorms.ox.ac.uk", 
        role = c("aut"), comment = c(ORCID = "0000-0003-3308-9905"))
     )
-Maintainer: The package maintainer <yourself@somewhere.net>
 Description: This packages computes the large scale characterization of the OMOP
     Common Data Model at patient level or summarizing at cohort level.
 License: Apache License (>= 2)
@@ -27,10 +26,14 @@ Imports:
     duckdb,
     lubridate,
     tibble,
-    tidyr
+    tidyr,
+    cli
 Suggests: 
     testthat,
     knitr,
     rmarkdown,
-    SqlRender
+    SqlRender,
+    here
 VignetteBuilder: knitr
+Depends: 
+    R (>= 2.10)

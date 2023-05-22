@@ -153,8 +153,14 @@ mockLargeScaleCharacteristics(
 \item{...}{user self defined tibble table to put in cdm, it can input as many as the user want}
 }
 \value{
-
+the function returns a mock database with OMOP tables that users/developers can test the functions on
 }
 \description{
 It creates a mock database for testing LargeScaleCharacteristics package
+}
+\examples{
+\dontrun{
+library(DBI)
+library(LargeScaleCharacteristics)
+cdm <- mockLargeScaleCharacteristics()}
 }
