@@ -1,6 +1,6 @@
 test_that("check getLargeScaleCharacteristics inputs checks", {
   cohort1 <- tibble::tibble(
-    cohort_definition_id = c("1"),
+    cohort_definition_id = c(1),
     subject_id = c("1"),
     cohort_start_date = c(
       as.Date("2010-03-03")
@@ -10,7 +10,7 @@ test_that("check getLargeScaleCharacteristics inputs checks", {
     )
   )
   cohort2 <- tibble::tibble(
-    cohort_definition_id = c("1", "1", "1"),
+    cohort_definition_id = c(1, 1, 1),
     subject_id = c("1", "2", "3"),
     cohort_start_date = c(
       as.Date("2000-03-03"), as.Date("2000-03-01"), as.Date("2000-02-01")
@@ -110,7 +110,7 @@ test_that("check getLargeScaleCharacteristics inputs checks", {
 
 test_that("check overlap and drug era table works", {
   cohort1 <- tibble::tibble(
-    cohort_definition_id = c(rep("1", 9)),
+    cohort_definition_id = c(rep(1, 9)),
     subject_id = c(rep("1", 9)),
     cohort_start_date = c(
       as.Date("2012-03-01"),
@@ -172,7 +172,7 @@ test_that("check overlap and drug era table works", {
 
   # test another cohort
   cohort1 <- tibble::tibble(
-    cohort_definition_id = c(rep("1", 9)),
+    cohort_definition_id = c(rep(1, 9)),
     subject_id = c(rep("1", 9)),
     cohort_start_date = c(
       as.Date("2010-03-01"),
@@ -227,7 +227,7 @@ test_that("check overlap and drug era table works", {
 
 test_that("check each supported table works", {
   cohort1 <- tibble::tibble(
-    cohort_definition_id = c(rep("1", 9)),
+    cohort_definition_id = c(rep(1, 9)),
     subject_id = c(rep("1", 9)),
     cohort_start_date = c(
       as.Date("2012-03-01"),
@@ -413,7 +413,7 @@ test_that("check each supported table works", {
 
 test_that("check multiple target cohort IDs works", {
   cohort1 <- tibble::tibble(
-    cohort_definition_id = c("1", "2"),
+    cohort_definition_id = c(1, 2),
     subject_id = c("1", "1"),
     cohort_start_date = c(
       as.Date("2010-03-03"),
@@ -450,7 +450,7 @@ test_that("check multiple target cohort IDs works", {
 
 test_that("check descandants count", {
   cohort1 <- tibble::tibble(
-    cohort_definition_id = c("1", "1", "1", "2"),
+    cohort_definition_id = c(1, 1, 1, 2),
     subject_id = c("1", "1", "1", "2"),
     cohort_start_date = c(
       as.Date("2010-03-03"),
@@ -466,7 +466,7 @@ test_that("check descandants count", {
     )
   )
   cohort2 <- tibble::tibble(
-    cohort_definition_id = c("1", "1", "1"),
+    cohort_definition_id = c(1, 1, 1),
     subject_id = c("1", "2", "3"),
     cohort_start_date = c(
       as.Date("2000-03-03"), as.Date("2000-03-01"), as.Date("2000-02-01")
@@ -535,7 +535,7 @@ test_that("check descandants count", {
 
 test_that("check source count", {
   cohort1 <- tibble::tibble(
-    cohort_definition_id = c("1", "1", "1", "2"),
+    cohort_definition_id = c(1, 1, 1, 2),
     subject_id = c("1", "1", "1", "2"),
     cohort_start_date = c(
       as.Date("2010-03-03"),
@@ -612,7 +612,7 @@ test_that("check source count", {
 
 test_that("check missing condition end date", {
   cohort1 <- tibble::tibble(
-    cohort_definition_id = c("1", "1", "2", "2"),
+    cohort_definition_id = c(1, 1, 2, 2),
     subject_id = c("1", "1", "1", "2"),
     cohort_start_date = c(
       as.Date("2010-03-03"),
@@ -667,7 +667,7 @@ test_that("check missing condition end date", {
 
 test_that("check smd works", {
   cohort1 <- tibble::tibble(
-    cohort_definition_id = c("1", "1", "2", "2","2"),
+    cohort_definition_id = c(1, 1, 2, 2, 2),
     subject_id = c("1", "1", "1", "2", "2"),
     cohort_start_date = c(
       as.Date("2011-03-03"),

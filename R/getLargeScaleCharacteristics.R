@@ -162,7 +162,8 @@ getLargeScaleCharacteristics <- function(cdm,
 
   result <- result %>%
     dplyr::mutate(cdm_name = CDMConnector::cdmName(.env$cdm)) %>%
-    dplyr::mutate(cohort_name = .env$targetCohortName) %>%
+    dplyr::left_join(attr(cdm[[targetCohortName]],"cohort_set"), by = "cohort_definition_id") %>%
+    # dplyr::mutate(cohort_name = attr(cdm[[targetCohortName]],"cohort_set")$cohort_name) %>%
     dplyr::select(
       "cohort_definition_id", "cohort_name", "table_name", "window_name", "concept_id",
       "concept_name", "concept_count", "denominator_count",
